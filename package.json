@@ -1,0 +1,12 @@
+{
+  "name": "privylens",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "concurrently \"npm run frontend\" \"npm run backend\"",
+    "frontend": "cd frontend && npm run dev",
+    "backend": "cd backend && .venv\\Scripts\\uvicorn app.main:app --reload --port 8000"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}
