@@ -1,120 +1,236 @@
-# Python
+# ==========================
+
+# Global Ignore List
+
+# ==========================
+
+
+
+# === Python ===
+
 __pycache__/
+
 *.py[cod]
+
 *$py.class
+
 *.so
+
 .Python
-backend/lib/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-venv/
-.venv/
-ENV/
-env/
+
 .env
 
-# Next.js
-frontend/.next/
-frontend/out/
-frontend/build/
-frontend/dist/
-frontend/.turbo/
-frontend/node_modules/
-frontend/.swc/
+*.env
 
-# Node.js
+env/
+
+venv/
+
+.venv/
+
+ENV/
+
+# (backend Python project sudah dipindahkan, path spesifik backend dihapus)
+
+build/
+
+develop-eggs/
+
+dist/
+
+downloads/
+
+eggs/
+
+.eggs/
+
+lib64/
+
+parts/
+
+sdist/
+
+var/
+
+wheels/
+
+*.egg-info/
+
+.installed.cfg
+
+*.egg
+
+MANIFEST
+
+
+
+# === Node.js / Next.js ===
+
 node_modules/
+
 npm-debug.log*
+
 yarn-debug.log*
+
 yarn-error.log*
+
 lerna-debug.log*
+
 .pnpm-debug.log*
+
 .npm
+
 .eslintcache
+
 .node_repl_history
+
 *.tgz
+
 .yarn-integrity
 
-# Environment variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.env*.local
 
-# IDE / Editor
+
+# Next.js build/output (root project)
+
+.next/
+
+out/
+
+build/
+
+dist/
+
+.turbo/
+
+.swc/
+
+
+
+# === Environment variables ===
+
+.env
+
+.env.*
+
+!.env.example
+
+
+
+# === IDE / Editors ===
+
 .vscode/
+
 .idea/
+
 *.swp
+
 *.swo
+
 *~
+
 *.sublime-project
+
 *.sublime-workspace
 
-# MacOS / OS Misc
+
+
+# === OS files ===
+
 .DS_Store
+
 .DS_Store?
+
 ._*
+
 .Spotlight-V100
+
 .Trashes
+
 ehthumbs.db
+
 Thumbs.db
+
 Desktop.ini
 
-# Logs
+
+
+# === Logs ===
+
 *.log
-logs/
+
 *.log.*
 
-# Temporary files
-backend/temp_files/
-backend/uploads/
+logs/
+
+
+
+# === Temp Files ===
+
 *.tmp
+
 *.temp
+
 *.bak
+
 *.backup
 
-# Testing
-.cache
+
+
+# === Testing / Coverage ===
+
+.cache/
+
 .coverage
+
 .cover
+
 .pytest_cache/
+
 .tox/
+
 htmlcov/
+
 .hypothesis/
+
 nosetests.xml
+
 coverage.xml
 
-# Database
+
+
+# === Database files ===
+
 *.db
+
 *.sqlite
+
 *.sqlite3
 
-# Playwright
+
+
+# === Playwright ===
+
 test-results/
+
 playwright-report/
+
 playwright/.cache/
 
-# Miscellaneous
+
+
+# === Miscellaneous ===
+
 *.pid
+
 *.seed
+
 *.pid.lock
+
 .cursor/
 
 SMOKE_TEST_GUIDE.md
+
 test_smoke.sh
+
 test_smoke.ps1
+

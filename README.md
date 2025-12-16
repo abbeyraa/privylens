@@ -1,342 +1,238 @@
-# PrivyLens
+# PrivyLens Automation Plan Builder
 
-### Local Document Intelligence Engine
+## Ringkasan
 
-PrivyLens adalah sistem analisis dokumen **offline-first** yang mampu membaca, mengekstraksi, dan menganalisis isi file seperti **PDF, DOCX, dan gambar/screenshot** menggunakan OCR dan model AI lokal. Semua proses berjalan pada perangkat pengguna, tanpa koneksi internet dan tanpa risiko kebocoran data.
+PrivyLens sekarang berfungsi sebagai **Automation Plan Builder** untuk otomasi input form berbasis browser.
 
----
+- Fase **perancangan** automasi dilakukan di UI Next.js (halaman `/automate`, yang juga menjadi homepage).
+- Fase **eksekusi teknis** dilakukan oleh **Playwright Runner** terpisah yang menjalankan browser nyata berdasarkan *Automation Plan* yang dihasilkan.
+- PrivyLens **tidak lagi** mengeksekusi JavaScript di browser target secara langsung maupun menyimpan logika DOM-detail di UI.
 
-## **Fitur Utama**
+Arsitektur ini memastikan pemisahan tegas antara:
 
-### **1. Ekstraksi Dokumen Offline**
-
-PrivyLens mendukung:
-
-- PDF (multi-page) - menggunakan pdfminer.six
-- DOCX - menggunakan python-docx
-- Gambar (PNG/JPG/JPEG) - menggunakan PaddleOCR
-- Screenshot teks
-- Dokumen hasil scan
-
-Sistem otomatis mendeteksi tipe file dan mengekstraksi teks menggunakan parser dan OCR lokal.
-
-### **2. Chat Kontekstual Dokumen (Offline)**
-
-- Upload dokumen lalu ajukan pertanyaan berbasis konten dokumen.
-- Model AI lokal menjawab tanpa koneksi internet.
-- Seluruh percakapan dan konteks tidak keluar dari perangkat.
-
-### **3. Privasi dan Keamanan Maksimal**
-
-Tidak ada data yang dikirim ke server eksternal.  
-Semua proses pemrosesan file, OCR, dan inferensi AI berlangsung pada perangkat pengguna.
-
-### **4. UI yang Bersih dan Mudah Digunakan**
-
-Aplikasi menyediakan antarmuka yang sederhana:
-
-- Halaman upload dokumen
-- Tampilan hasil ekstraksi
-- Tampilan analisis AI
+- **Niat & konfigurasi bisnis** (PrivyLens / Automation Plan)
+- **Eksekusi teknis di browser** (Playwright Runner)
 
 ---
 
-## **Persyaratan Sistem**
+## Fitur Utama
 
-### **Backend (Python)**
+### 1. Automation Plan Builder
 
-- Python 3.10 atau lebih baru
-- pip atau package manager Python lainnya
+Halaman utama `/` merender halaman `automate` yang menyediakan:
 
-### **Frontend (Node.js)**
+- **Konfigurasi target halaman**
+  - Target URL
+  - Metode sesi: `new` (sesi baru) atau `reuse` (menggunakan sesi login yang sudah ada)
+  - Optional `sessionId` untuk mengikat ke sesi tertentu
+  - Page Ready Indicator (selector / text / URL pattern) untuk memastikan halaman benar-benar siap diinteraksikan sebelum Playwright mulai bekerja
 
-- Node.js 18 atau lebih baru
-- npm atau yarn
+- **Konfigurasi sumber data**
+  - Upload file **CSV/XLSX** atau input manual di tabel
+  - Mode eksekusi: `single` (satu baris) atau `batch` (semua baris)
+  - Pratinjau data (beberapa baris pertama) agar pengguna memahami dataset yang akan dijalankan
 
-### **AI Model (Ollama)**
+- **Pemetaan field form berbasis maksud bisnis** (bukan selector DOM)
+  - Nama field yang mudah dipahami pengguna (mis. "Nama Lengkap", "Email", "Status")
+  - Tipe input: `text`, `select`, `checkbox`, `radio`, `textarea`
+  - Kunci data (`dataKey`) yang mengacu ke kolom data
+  - Status wajib / opsional
+  - Daftar label utama (teks yang diharapkan muncul di halaman)
+  - Daftar label cadangan (fallback) jika label utama tidak ditemukan
+  - Logika kondisional sederhana:
+    - Hanya isi jika data tersedia (`dataExists`)
+    - Hanya isi jika elemen tertentu muncul (`elementExists`)
 
-- Ollama terinstall (https://ollama.ai)
-- Model Llama3 sudah didownload
+- **Definisi alur aksi eksplisit**
+  - Jenis aksi:
+    - `fill` – mengisi field berdasarkan mapping
+    - `click` – menekan tombol/elemen
+    - `wait` – menunggu sejumlah detik
+    - `handleDialog` – menangani dialog/konfirmasi
+  - Target aksi:
+    - Untuk `fill`: nama field bisnis
+    - Untuk aksi lain: label/selector konseptual (nantinya diterjemahkan oleh Runner)
+  - `waitFor` indicator per aksi (selector / text / URL) untuk menyatakan kondisi pasca-aksi
 
----
+- **Indikator hasil eksekusi**
+  - **Success Indicator** (wajib): selector/text/url yang menandakan automasi berhasil
+  - **Failure Indicator** (opsional): selector/text/url yang menandakan automasi gagal
 
-## **Instalasi dan Setup**
+### 2. Automation Plan (Output Terstandarisasi)
 
-### **1. Setup Backend**
+Setelah konfigurasi selesai, PrivyLens menghasilkan **Automation Plan** dalam bentuk struktur data JSON terstandarisasi, misalnya (disederhanakan):
 
-```bash
-# Masuk ke direktori backend
-cd backend
-
-# Install dependencies Python
-pip install -r requirements.txt
+```json
+{
+  "target": {
+    "url": "https://example.com/form",
+    "sessionMethod": "reuse",
+    "sessionId": "session-123",
+    "pageReadyIndicator": { "type": "selector", "value": ".form-root" }
+  },
+  "dataSource": {
+    "type": "upload",
+    "rows": [ { "nama": "A", "email": "a@example.com" } ],
+    "mode": "batch"
+  },
+  "fieldMappings": [
+    {
+      "name": "Nama Lengkap",
+      "type": "text",
+      "dataKey": "nama",
+      "required": true,
+      "labels": ["Nama", "Nama Lengkap"],
+      "fallbackLabels": ["Full Name"]
+    }
+  ],
+  "actions": [
+    { "type": "fill", "target": "Nama Lengkap" },
+    { "type": "click", "target": "Submit" }
+  ],
+  "successIndicator": { "type": "text", "value": "Data berhasil disimpan" }
+}
 ```
 
-**Dependencies yang diinstall:**
+Automation Plan ini bersifat **final** dan **reproducible**, dan menjadi **satu-satunya input** untuk Playwright Runner.
 
-- `fastapi` - Web framework
-- `uvicorn[standard]` - ASGI server
-- `python-multipart` - Untuk file upload
-- `pdfminer.six` - Parser PDF
-- `python-docx` - Parser DOCX
-- `pillow` - Image processing
-- `paddlepaddle` - Deep learning framework untuk OCR
-- `paddleocr` - OCR engine
-- `pydantic` - Data validation
+### 3. Integrasi Playwright Runner (eksternal)
 
-### **2. Setup Frontend**
+- Playwright Runner **tidak berada di repo ini**.
+- PrivyLens mengirimkan Automation Plan (dan data terkait) ke endpoint Runner, misalnya:
+  - `POST /api/automation/run` (Next.js API route atau service eksternal)
+- Runner bertugas:
+  - Menjalankan browser nyata (Chromium/Firefox/WebKit)
+  - Mengelola sesi (baru / reuse)
+  - Menavigasi ke target URL
+  - Mencari elemen menggunakan strategi locator berlapis (label, teks, role, dsb.)
+  - Mengeksekusi aksi-aksi yang didefinisikan
+  - Menangani variasi struktur form secara defensif
+  - Melaporkan hasil per baris data (success / partial / failed) beserta alasan
+- Runner **tidak boleh** menyimpan state bisnis jangka panjang atau membuat keputusan lanjutan di luar Automation Plan.
+
+### 4. Laporan Eksekusi
+
+- Setelah eksekusi, Playwright Runner mengembalikan laporan dalam bentuk JSON.
+- PrivyLens menampilkan laporan tersebut dengan:
+  - Status global (berhasil / error)
+  - Ringkasan jumlah baris sukses / gagal
+  - Detail per baris:
+    - Data yang dipakai
+    - Aksi yang dijalankan dan statusnya
+    - Error atau warning yang terjadi
+- Pengguna dapat:
+  - Memperbaiki Automation Plan (mis. label kurang spesifik, urutan aksi salah)
+  - Menjalankan ulang **tanpa** harus membangun konfigurasi dari awal.
+
+---
+
+## Struktur Proyek
+
+Setelah pembersihan backend dan folder `frontend`, struktur utama proyek menjadi:
+
+```text
+privylens/
+├── .next/                  # Output build Next.js (otomatis)
+├── public/                 # Asset statis (ikon, ilustrasi, dll.)
+├── src/
+│   ├── app/
+│   │   ├── automate/
+│   │   │   ├── components/
+│   │   │   │   ├── ActionFlowSection.jsx
+│   │   │   │   ├── AutomationPlanPreview.jsx
+│   │   │   │   ├── DataSourceSection.jsx
+│   │   │   │   ├── ExecutionReport.jsx
+│   │   │   │   ├── FieldMappingSection.jsx
+│   │   │   │   └── TargetConfiguration.jsx
+│   │   │   └── page.jsx           # Halaman utama Automation Plan
+│   │   ├── favicon.ico
+│   │   ├── globals.css
+│   │   ├── layout.jsx             # Layout global + Header
+│   │   └── page.jsx               # Home → merender halaman automate
+│   ├── components/
+│   │   └── Header.jsx             # Navigasi sederhana (saat ini hanya Home/Automate)
+│   └── lib/
+│       └── api.js                 # Helper untuk ekstraksi CSV/XLSX (backend eksternal)
+├── next.config.mjs
+├── package.json
+├── package-lock.json
+├── postcss.config.mjs
+├── eslint.config.mjs
+├── jsconfig.json
+└── README.md
+```
+
+Catatan:
+
+- Folder/fungsi lama untuk **analysis** dan **extraction** telah dihapus.
+- Folder `backend/` sudah dihilangkan dari repo ini. Jika Anda ingin memakai backend terpisah, jalankan di repo/layanan lain dan sesuaikan `API_BASE_URL` di `src/lib/api.js`.
+
+---
+
+## Dependensi & Menjalankan Aplikasi
+
+### Prasyarat
+
+- **Node.js** 18 atau lebih baru
+- **npm** (atau pnpm/yarn, sesuaikan sendiri)
+
+### Instalasi
 
 ```bash
-# Masuk ke direktori frontend
-cd frontend
-
-# Install dependencies Node.js
+# Dari root project
 npm install
 ```
 
-### **3. Setup Ollama (AI Model Lokal)**
-
-**Install Ollama:**
-
-1. Download dari https://ollama.ai
-2. Install sesuai sistem operasi Anda
-3. Pastikan Ollama service berjalan
-
-**Download Model Llama3:**
+### Menjalankan Dev Server
 
 ```bash
-ollama pull llama3
-```
-
-**Verifikasi:**
-
-```bash
-ollama list
-# Harus menampilkan llama3 dalam daftar
-```
-
----
-
-## **Menjalankan Aplikasi**
-
-### **1. Menjalankan Backend**
-
-```bash
-# Dari direktori backend
-cd backend
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-Backend akan berjalan di `http://localhost:8000`
-
-**Verifikasi:**
-
-```bash
-curl http://localhost:8000/
-# Harus mengembalikan: {"status":"FastAPI backend running offline"}
-```
-
-### **2. Menjalankan Frontend**
-
-```bash
-# Dari direktori frontend (terminal baru)
-cd frontend
 npm run dev
+# Aplikasi akan tersedia di http://localhost:3000
 ```
 
-Frontend akan berjalan di `http://localhost:3000`
-
-### **3. Akses Aplikasi**
-
-Buka browser dan akses: `http://localhost:3000`
+Home (`/`) akan langsung menampilkan halaman **Automation Plan Builder**.
 
 ---
 
-## **Penggunaan API (cURL Examples)**
+## Integrasi dengan Backend Ekstraksi & Playwright Runner
 
-### **1. Upload dan Ekstrak Dokumen**
+Secara default, helper `src/lib/api.js` mengarah ke:
 
-**Upload PDF:**
-
-```bash
-curl -X POST http://localhost:8000/ingest \
-  -F "file=@/path/to/document.pdf"
+```javascript
+const API_BASE_URL = "http://localhost:8000";
 ```
 
-**Upload DOCX:**
+Anda dapat:
 
-```bash
-curl -X POST http://localhost:8000/ingest \
-  -F "file=@/path/to/document.docx"
+- Menyediakan service ekstraksi CSV/XLSX sendiri di belakang `API_BASE_URL`, **atau**
+- Mengubah `API_BASE_URL` menjadi `"/api"` dan mengimplementasikan Next.js API route (`src/app/api/...`) sesuai kebutuhan.
+
+Playwright Runner diharapkan tersedia di endpoint seperti:
+
+```http
+POST /api/automation/run
+Content-Type: application/json
+
+{ "plan": { ...AutomationPlan... } }
 ```
 
-**Upload Gambar (OCR):**
-
-```bash
-curl -X POST http://localhost:8000/ingest \
-  -F "file=@/path/to/image.png"
-```
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "file_id": "uuid-here",
-  "filename": "document.pdf",
-  "extracted_text": "Teks yang diekstrak dari dokumen..."
-}
-```
-
-### **2. Chat dengan Konteks Dokumen**
-
-```bash
-curl -X POST http://localhost:8000/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "message": "Apa inti dokumen ini?",
-    "document_context": "Teks dokumen yang sudah diekstrak"
-  }'
-```
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "response": "Jawaban berbasis konteks dokumen..."
-}
-```
+Endpoint ini **belum** diimplementasikan di repo ini dan perlu Anda sediakan sendiri sesuai infrastruktur yang diinginkan.
 
 ---
 
-## **Arsitektur**
+## Prinsip Desain dan Pemisahan Fase
 
-### **Backend Structure**
+1. **PrivyLens mengelola niat & konfigurasi**:
+   - Tidak menyimpan selector DOM teknis di UI
+   - Semua yang didefinisikan bersifat konseptual (field bisnis, label, aksi logis)
 
-```
-backend/
-├── app/
-│   ├── main.py              # FastAPI application
-│   ├── routers/             # API endpoints
-│   │   ├── ingest.py        # Upload & extraction
-│   │   ├── chat.py          # Chat berbasis konteks dokumen
-│   │   ├── variables.py     # CSV/XLSX rows & sheets
-│   │   ├── automation.py    # Playwright form automation
-│   │   └── browser.py       # Playwright streaming & selector detect
-│   ├── services/            # Business logic
-│   │   ├── pdf_parser.py
-│   │   ├── docx_parser.py
-│   │   ├── ocr.py
-│   │   ├── csv_parser.py
-│   │   ├── xlsx_parser.py
-│   │   ├── html_form_parser.py
-│   │   ├── playwright_automation.py
-│   │   └── ai_engine.py     # Local AI (Ollama) chat/analysis
-│   └── utils/
-│       ├── file_handler.py
-│       └── text_cleaner.py
-├── temp_files/
-└── requirements.txt
-```
+2. **Playwright Runner mengeksekusi di browser**:
+   - Mengambil Automation Plan sebagai input immutable
+   - Melakukan pencarian elemen yang robust berdasarkan label & strategi locator berlapis
+   - Meng-handle variasi DOM secara defensif
 
-### **Frontend Structure**
+3. **Tidak ada skrip browser ad-hoc**:
+   - Tidak ada lagi generator script `console.log` atau content-script Chrome extension di UI
+   - Semua eksekusi harus melalui Playwright Runner yang mengonsumsi Automation Plan
 
-```
-frontend/
-├── src/
-│   ├── app/
-│   │   ├── page.jsx         # Upload
-│   │   ├── extraction/      # Hasil ekstraksi
-│   │   ├── analysis/        # Chat dengan konteks dokumen
-│   │   └── automate/        # Automate Input Form (Playwright)
-│   └── components/
-│       ├── FileUpload.jsx
-│       ├── TextPanel.jsx
-│       ├── MetadataPanel.jsx
-│       └── PlaywrightBrowser.jsx
-└── package.json
-```
-
----
-
-## **Offline-First Architecture**
-
-PrivyLens dirancang untuk berjalan **sepenuhnya offline**:
-
-1. **PDF/DOCX Parsing**: Menggunakan library Python lokal (pdfminer.six, python-docx)
-2. **OCR**: Menggunakan PaddleOCR yang berjalan lokal tanpa koneksi internet
-3. **AI Analysis**: Menggunakan Ollama dengan model lokal (Llama3)
-4. **No External APIs**: Tidak ada panggilan ke API eksternal atau cloud services
-
-**Catatan Penting:**
-
-- Pastikan Ollama service berjalan sebelum menggunakan fitur analisis AI
-- Model Llama3 harus sudah didownload (`ollama pull llama3`)
-- Semua dependencies harus terinstall untuk ekstraksi dokumen
-
----
-
-## **Troubleshooting**
-
-### **Backend tidak bisa start**
-
-- Pastikan Python dependencies terinstall: `pip install -r requirements.txt`
-- Pastikan port 8000 tidak digunakan aplikasi lain
-- Cek error log di terminal
-
-### **OCR tidak bekerja**
-
-- Pastikan PaddleOCR terinstall: `pip install paddleocr paddlepaddle`
-- PaddleOCR akan download model pertama kali (sekali saja, kemudian offline)
-- Pastikan file gambar valid (PNG, JPG, JPEG)
-
-### **AI Analysis gagal**
-
-- Pastikan Ollama terinstall dan berjalan
-- Pastikan model llama3 sudah didownload: `ollama pull llama3`
-- Cek apakah Ollama service berjalan: `ollama list`
-- Restart Ollama service jika perlu
-
-### **Frontend tidak connect ke backend**
-
-- Pastikan backend berjalan di `http://localhost:8000`
-- Cek CORS settings di `backend/app/main.py`
-- Pastikan tidak ada firewall yang memblokir koneksi
-
----
-
-## **Development**
-
-### **Backend Development**
-
-```bash
-cd backend
-uvicorn app.main:app --reload
-```
-
-### **Frontend Development**
-
-```bash
-cd frontend
-npm run dev
-```
-
-### **Linting & Formatting**
-
-```bash
-# Backend (optional, menggunakan black/flake8 jika tersedia)
-cd backend
-# black app/
-# flake8 app/
-
-# Frontend
-cd frontend
-npm run lint
-```
-
----
-
-## **License**
-
-MIT License
+Dengan arsitektur ini, PrivyLens menjadi alat perancangan otomasi yang stabil, dapat diulang, dan lebih mudah diintegrasikan dengan runner atau orkestrator lain di masa depan.
