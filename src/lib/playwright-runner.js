@@ -479,7 +479,7 @@ async function findElementByTextOrSelector(page, target) {
 
   // Cari berdasarkan text
   const textSelectors = [
-    `button:has-text("${target}")`,
+    `button:text-is("${target}")`,
     `a:has-text("${target}")`,
     `*:has-text("${target}")`,
   ];

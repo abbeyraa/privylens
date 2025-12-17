@@ -54,9 +54,10 @@ export default function ActionFlowSection({
       </div>
 
       <p className="text-xs text-gray-600 mb-2">
-        Definisikan urutan aksi yang akan dieksekusi SETELAH sampai di halaman target.
-        Aksi akan dijalankan secara berurutan. Untuk mode batch, alur ini akan di-loop untuk setiap baris data.
-        Contoh: Klik tombol "Tambah Data" → Isi form → Handle popup → Kembali ke halaman awal.
+        Definisikan urutan aksi yang akan dieksekusi SETELAH sampai di halaman
+        target. Aksi akan dijalankan secara berurutan. Untuk mode batch, alur
+        ini akan di-loop untuk setiap baris data. Contoh: Klik tombol "Tambah
+        Data" → Isi form → Handle popup → Kembali ke halaman awal.
       </p>
 
       <div className="space-y-2 flex-1 overflow-y-auto max-h-[calc(100vh-200px)]">
@@ -81,7 +82,9 @@ export default function ActionFlowSection({
                     <option value="click">Klik Tombol/Elemen</option>
                     <option value="wait">Tunggu</option>
                     <option value="handleDialog">Tangani Dialog</option>
-                    <option value="navigate">Navigasi/Kembali ke Halaman</option>
+                    <option value="navigate">
+                      Navigasi/Kembali ke Halaman
+                    </option>
                   </select>
                 </div>
 
@@ -94,7 +97,9 @@ export default function ActionFlowSection({
                     {action.type === "fill" ? (
                       <select
                         value={action.target}
-                        onChange={(e) => updateAction(idx, "target", e.target.value)}
+                        onChange={(e) =>
+                          updateAction(idx, "target", e.target.value)
+                        }
                         className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
                         <option value="">Pilih Field</option>
@@ -108,7 +113,9 @@ export default function ActionFlowSection({
                       <input
                         type="text"
                         value={action.target}
-                        onChange={(e) => updateAction(idx, "target", e.target.value)}
+                        onChange={(e) =>
+                          updateAction(idx, "target", e.target.value)
+                        }
                         placeholder="URL atau kosongkan untuk kembali ke halaman target awal"
                         className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
@@ -116,7 +123,9 @@ export default function ActionFlowSection({
                       <input
                         type="text"
                         value={action.target}
-                        onChange={(e) => updateAction(idx, "target", e.target.value)}
+                        onChange={(e) =>
+                          updateAction(idx, "target", e.target.value)
+                        }
                         placeholder={
                           action.type === "click"
                             ? "Label atau selector tombol/elemen (contoh: Tambah Data)"
@@ -216,7 +225,8 @@ export default function ActionFlowSection({
 
         {actions.length === 0 && (
           <p className="text-center text-gray-500 py-8">
-            Belum ada aksi yang didefinisikan. Klik tombol "+ Aksi" untuk menambahkan.
+            Belum ada aksi yang didefinisikan. Klik tombol "+ Aksi" untuk
+            menambahkan.
           </p>
         )}
       </div>

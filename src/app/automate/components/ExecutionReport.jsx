@@ -40,7 +40,9 @@ export default function ExecutionReport({ report }) {
       {/* Summary */}
       {report.summary && (
         <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-          <h3 className="font-semibold text-gray-700 mb-2 text-sm">Ringkasan</h3>
+          <h3 className="font-semibold text-gray-700 mb-2 text-sm">
+            Ringkasan
+          </h3>
           <div className="grid grid-cols-3 gap-3 text-xs">
             <div>
               <span className="text-gray-600">Total:</span>{" "}
@@ -66,7 +68,10 @@ export default function ExecutionReport({ report }) {
       {report.status === "error" && report.message && (
         <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-red-800 font-medium text-sm">Error:</p>
-          <p className="text-red-600 text-xs mt-1">{report.message}</p>
+          {/* Full message, not truncated */}
+          <pre className="text-red-600 text-xs mt-1 whitespace-pre-wrap break-all" style={{ wordBreak: 'break-word' }}>
+            {report.message}
+          </pre>
         </div>
       )}
 
@@ -77,79 +82,92 @@ export default function ExecutionReport({ report }) {
             Detail Hasil ({report.results.length} baris)
           </summary>
           <div className="space-y-2 mt-2">
-          {report.results.map((result, idx) => (
-            <div
-              key={idx}
-              className={`border-2 rounded-lg p-3 ${getStatusColor(result.status)}`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-lg font-bold">
-                      {getStatusIcon(result.status)}
-                    </span>
-                    <span className="font-semibold">
-                      Baris {result.rowIndex !== undefined ? result.rowIndex + 1 : idx + 1}
-                    </span>
-                    <span className="text-xs px-2 py-1 bg-white rounded">
-                      {result.status}
-                    </span>
-                  </div>
-
-                  {/* Data Used */}
-                  {result.data && (
-                    <div className="mt-1 text-xs">
-                      <span className="font-medium">Data:</span>{" "}
-                      {JSON.stringify(result.data).substring(0, 100)}
-                      {JSON.stringify(result.data).length > 100 && "..."}
+            {report.results.map((result, idx) => (
+              <div
+                key={idx}
+                className={`border-2 rounded-lg p-3 ${getStatusColor(
+                  result.status
+                )}`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg font-bold">
+                        {getStatusIcon(result.status)}
+                      </span>
+                      <span className="font-semibold">
+                        Baris{" "}
+                        {result.rowIndex !== undefined
+                          ? result.rowIndex + 1
+                          : idx + 1}
+                      </span>
+                      <span className="text-xs px-2 py-1 bg-white rounded">
+                        {result.status}
+                      </span>
                     </div>
-                  )}
 
-                  {/* Actions Executed */}
-                  {result.actions && result.actions.length > 0 && (
-                    <div className="mt-1 text-xs">
-                      <span className="font-medium">Aksi:</span>{" "}
-                      {result.actions.map((action, actIdx) => (
-                        <span key={actIdx} className="mr-2">
-                          {action.type}→{action.target}
-                          {action.success !== undefined && (
-                            <span className={action.success ? "text-green-600" : "text-red-600"}>
-                              {action.success ? "✓" : "✗"}
-                            </span>
-                          )}
+                    {/* Data Used */}
+                    {result.data && (
+                      <div className="mt-1 text-xs">
+                        <span className="font-medium">Data:</span>{" "}
+                        {JSON.stringify(result.data).substring(0, 100)}
+                        {JSON.stringify(result.data).length > 100 && "..."}
+                      </div>
+                    )}
+
+                    {/* Actions Executed */}
+                    {result.actions && result.actions.length > 0 && (
+                      <div className="mt-1 text-xs">
+                        <span className="font-medium">Aksi:</span>{" "}
+                        {result.actions.map((action, actIdx) => (
+                          <span key={actIdx} className="mr-2">
+                            {action.type}→{action.target}
+                            {action.success !== undefined && (
+                              <span
+                                className={
+                                  action.success
+                                    ? "text-green-600"
+                                    : "text-red-600"
+                                }
+                              >
+                                {action.success ? "✓" : "✗"}
+                              </span>
+                            )}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Error Details */}
+                    {result.error && (
+                      <div className="mt-1 text-xs">
+                        <span className="font-medium">Error:</span>{" "}
+                        <span className="text-red-600">
+                          {result.error.substring(0, 80)}
                         </span>
-                      ))}
-                    </div>
-                  )}
+                        {result.error.length > 80 && "..."}
+                      </div>
+                    )}
 
-                  {/* Error Details */}
-                  {result.error && (
-                    <div className="mt-1 text-xs">
-                      <span className="font-medium">Error:</span>{" "}
-                      <span className="text-red-600">{result.error.substring(0, 80)}</span>
-                      {result.error.length > 80 && "..."}
-                    </div>
-                  )}
+                    {/* Warnings */}
+                    {result.warnings && result.warnings.length > 0 && (
+                      <div className="mt-1 text-xs">
+                        <span className="font-medium">Peringatan:</span>{" "}
+                        {result.warnings.join(", ").substring(0, 80)}
+                        {result.warnings.join(", ").length > 80 && "..."}
+                      </div>
+                    )}
 
-                  {/* Warnings */}
-                  {result.warnings && result.warnings.length > 0 && (
-                    <div className="mt-1 text-xs">
-                      <span className="font-medium">Peringatan:</span>{" "}
-                      {result.warnings.join(", ").substring(0, 80)}
-                      {result.warnings.join(", ").length > 80 && "..."}
-                    </div>
-                  )}
-
-                  {/* Duration */}
-                  {result.duration && (
-                    <div className="mt-1 text-xs text-gray-600">
-                      Durasi: {result.duration}ms
-                    </div>
-                  )}
+                    {/* Duration */}
+                    {result.duration && (
+                      <div className="mt-1 text-xs text-gray-600">
+                        Durasi: {result.duration}ms
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
           </div>
         </details>
       )}

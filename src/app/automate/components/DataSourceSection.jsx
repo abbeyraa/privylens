@@ -60,7 +60,14 @@ export default function DataSourceSection({
   };
 
   const addManualColumn = () => {
-    const nextName = `field${manualColumns.length + 1}`;
+    // Find the next available field name that isn't in manualColumns
+    let nextIndex = 1;
+    let nextName;
+    do {
+      nextName = `field${nextIndex}`;
+      nextIndex++;
+    } while (manualColumns.includes(nextName));
+
     setManualColumns([...manualColumns, nextName]);
     setManualRows(
       manualRows.map((row) => ({
@@ -167,7 +174,9 @@ export default function DataSourceSection({
               onChange={handleFileSelect}
               className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
-            {loading && <p className="mt-1 text-sm text-blue-600">Memproses file...</p>}
+            {loading && (
+              <p className="mt-1 text-sm text-blue-600">Memproses file...</p>
+            )}
             {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
 
             {/* Sheet Selection (XLSX) */}
@@ -203,7 +212,7 @@ export default function DataSourceSection({
                 </label>
                 <button
                   onClick={addManualColumn}
-                  className="px-2 py-0.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                  className="px-2 py-0.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer"
                 >
                   + Kolom
                 </button>
@@ -220,9 +229,9 @@ export default function DataSourceSection({
                     {manualColumns.length > 1 && (
                       <button
                         onClick={() => removeManualColumn(idx)}
-                        className="px-1.5 py-1 text-xs text-red-600 hover:bg-red-50 rounded-lg"
+                        className="px-1.5 py-1 text-xs text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
                       >
-                        ×
+                        X
                       </button>
                     )}
                   </div>
@@ -238,7 +247,7 @@ export default function DataSourceSection({
                 </label>
                 <button
                   onClick={addManualRow}
-                  className="px-2 py-0.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                  className="px-2 py-0.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer"
                 >
                   + Baris
                 </button>
@@ -264,12 +273,19 @@ export default function DataSourceSection({
                     {manualRows.map((row, rowIdx) => (
                       <tr key={rowIdx}>
                         {manualColumns.map((col) => (
-                          <td key={col} className="border border-gray-300 px-1 py-0.5">
+                          <td
+                            key={col}
+                            className="border border-gray-300 px-1 py-0.5"
+                          >
                             <input
                               type="text"
                               value={row[col] || ""}
                               onChange={(e) =>
-                                handleManualCellChange(rowIdx, col, e.target.value)
+                                handleManualCellChange(
+                                  rowIdx,
+                                  col,
+                                  e.target.value
+                                )
                               }
                               className="w-full px-1 py-0.5 text-xs border border-gray-200 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
                             />
@@ -279,7 +295,7 @@ export default function DataSourceSection({
                           {manualRows.length > 1 && (
                             <button
                               onClick={() => removeManualRow(rowIdx)}
-                              className="text-red-600 hover:text-red-800 text-xs"
+                              className="text-red-600 hover:text-red-800 text-xs cursor-pointer"
                             >
                               ×
                             </button>
