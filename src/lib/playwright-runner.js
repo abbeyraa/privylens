@@ -29,43 +29,51 @@ export async function executeAutomationPlan(plan) {
   const context = await browser.newContext();
   const page = await context.newPage();
 
+  const normalizedPlan = normalizePlan(plan);
   const results = [];
   const startTime = Date.now();
 
   try {
+    // Jika flow mengandung handleDialog, pasang handler dari awal agar dialog
+    // yang muncul saat click tidak membuat aksi terlihat "tidak jalan".
+    installDialogAutoAcceptIfNeeded(page, normalizedPlan);
+
     // Step 1: Login jika diperlukan
-    if (plan.target.login) {
-      await performLogin(page, plan.target.login);
+    if (normalizedPlan.target.login) {
+      await performLogin(page, normalizedPlan.target.login);
     }
 
     // Step 2: Navigation ke halaman target
-    if (plan.target.navigation && plan.target.navigation.length > 0) {
-      await performNavigation(page, plan.target.navigation);
+    if (
+      normalizedPlan.target.navigation &&
+      normalizedPlan.target.navigation.length > 0
+    ) {
+      await performNavigation(page, normalizedPlan.target.navigation);
     }
 
     // Step 3: Navigate ke target URL dan tunggu page ready
-    await page.goto(plan.target.url, { waitUntil: "networkidle" });
-    await waitForPageReady(page, plan.target.pageReadyIndicator);
+    await page.goto(normalizedPlan.target.url, { waitUntil: "networkidle" });
+    await waitForPageReady(page, normalizedPlan.target.pageReadyIndicator);
 
     // Step 4: Eksekusi berdasarkan mode
-    if (plan.dataSource.mode === "batch") {
+    if (normalizedPlan.dataSource.mode === "batch") {
       // Batch mode: loop untuk setiap baris data
-      for (let i = 0; i < plan.dataSource.rows.length; i++) {
-        const rowData = plan.dataSource.rows[i];
+      for (let i = 0; i < normalizedPlan.dataSource.rows.length; i++) {
+        const rowData = normalizedPlan.dataSource.rows[i];
         const result = await executeActionsForRow(
           page,
-          plan,
+          normalizedPlan,
           rowData,
           i,
-          plan.target.url
+          normalizedPlan.target.url
         );
         results.push(result);
 
         // Jika gagal dan ada failure indicator, stop atau continue sesuai kebutuhan
-        if (result.status === "failed" && plan.failureIndicator) {
+        if (result.status === "failed" && normalizedPlan.failureIndicator) {
           const failureDetected = await checkIndicator(
             page,
-            plan.failureIndicator
+            normalizedPlan.failureIndicator
           );
           if (failureDetected) {
             break; // Stop jika failure indicator terdeteksi
@@ -75,18 +83,29 @@ export async function executeAutomationPlan(plan) {
     } else {
       // Single mode: hanya eksekusi untuk satu baris
       const rowIndex =
-        plan.dataSource.selectedRowIndex !== undefined
-          ? plan.dataSource.selectedRowIndex
+        normalizedPlan.dataSource.selectedRowIndex !== undefined
+          ? normalizedPlan.dataSource.selectedRowIndex
           : 0;
-      const rowData = plan.dataSource.rows[rowIndex];
-      const result = await executeActionsForRow(
-        page,
-        plan,
-        rowData,
-        rowIndex,
-        plan.target.url
-      );
-      results.push(result);
+      const rowData = normalizedPlan.dataSource.rows[rowIndex] || {};
+
+      if (normalizedPlan.execution?.mode === "loop") {
+        const loopResults = await executeActionsWithLoop(
+          page,
+          normalizedPlan,
+          rowData,
+          normalizedPlan.target.url
+        );
+        results.push(...loopResults);
+      } else {
+        const result = await executeActionsForRow(
+          page,
+          normalizedPlan,
+          rowData,
+          rowIndex,
+          normalizedPlan.target.url
+        );
+        results.push(result);
+      }
     }
 
     // Step 5: Generate summary
@@ -120,6 +139,109 @@ export async function executeAutomationPlan(plan) {
   } finally {
     await browser.close();
   }
+}
+
+function normalizePlan(plan) {
+  if (!plan || typeof plan !== "object") {
+    throw new Error("Automation plan tidak valid");
+  }
+
+  const target = plan.target || {};
+  if (!target.url) {
+    throw new Error("Target URL tidak ditemukan di plan");
+  }
+  if (!target.pageReadyIndicator?.type || !target.pageReadyIndicator?.value) {
+    throw new Error("Page Ready Indicator tidak valid di plan");
+  }
+
+  const dataSource =
+    plan.dataSource && typeof plan.dataSource === "object"
+      ? plan.dataSource
+      : {
+          type: "manual",
+          rows: [{}],
+          mode: "single",
+          selectedRowIndex: 0,
+        };
+
+  const rows = Array.isArray(dataSource.rows) ? dataSource.rows : [{}];
+  const safeDataSource = {
+    type: dataSource.type || "manual",
+    rows: rows.length > 0 ? rows : [{}],
+    mode: dataSource.mode === "batch" ? "batch" : "single",
+    ...(dataSource.selectedRowIndex !== undefined
+      ? { selectedRowIndex: dataSource.selectedRowIndex }
+      : {}),
+  };
+
+  return {
+    ...plan,
+    target,
+    dataSource: safeDataSource,
+    fieldMappings: Array.isArray(plan.fieldMappings) ? plan.fieldMappings : [],
+    actions: Array.isArray(plan.actions) ? plan.actions : [],
+  };
+}
+
+async function executeActionsWithLoop(page, plan, rowData, targetUrl) {
+  const loop = plan.execution?.loop || {};
+  const maxIterations = Number(loop.maxIterations ?? 50);
+  const delaySeconds = Number(loop.delaySeconds ?? 0);
+  const stopWhen = loop.stopWhen === "visible" ? "visible" : "notVisible";
+  const indicator = loop.indicator;
+
+  if (!indicator?.type || !indicator?.value) {
+    throw new Error(
+      "Mode loop membutuhkan execution.loop.indicator (type & value)."
+    );
+  }
+
+  const iterations = [];
+
+  for (let i = 0; i < maxIterations; i++) {
+    const indicatorState = await checkIndicator(page, indicator);
+    const shouldStop =
+      stopWhen === "visible"
+        ? indicatorState === true
+        : indicatorState === false;
+
+    if (shouldStop) {
+      if (i === 0) {
+        iterations.push({
+          rowIndex: 0,
+          status: "success",
+          data: rowData,
+          actions: [],
+          warnings: [
+            "Loop berhenti sebelum iterasi pertama (kondisi stop sudah terpenuhi).",
+          ],
+          duration: 0,
+        });
+      }
+      break;
+    }
+
+    const result = await executeActionsForRow(
+      page,
+      plan,
+      rowData,
+      i,
+      targetUrl
+    );
+    iterations.push(result);
+
+    // Jika ada failure indicator dan terdeteksi, stop segera
+    if (plan.failureIndicator) {
+      const failureDetected = await checkIndicator(page, plan.failureIndicator);
+      if (failureDetected) break;
+    }
+
+    if (delaySeconds > 0) {
+      await page.waitForTimeout(delaySeconds * 1000);
+    }
+  }
+
+  return iterations;
 }
 
 /**
@@ -268,16 +390,20 @@ async function executeActionsForRow(page, plan, rowData, rowIndex, targetUrl) {
     }
 
     // Check success indicator
-    const success = await checkIndicator(page, plan.successIndicator);
-    const failure = plan.failureIndicator
-      ? await checkIndicator(page, plan.failureIndicator)
-      : false;
+    const success =
+      plan.successIndicator?.type && plan.successIndicator?.value
+        ? await checkIndicator(page, plan.successIndicator)
+        : null;
+    const failure =
+      plan.failureIndicator?.type && plan.failureIndicator?.value
+        ? await checkIndicator(page, plan.failureIndicator)
+        : false;
 
     const status = failure
       ? "failed"
-      : success
+      : success === true
       ? "success"
-      : actionResults.every((ar) => ar.success)
+      : actionResults.every((ar) => ar.success) && success !== false
       ? "success"
       : "partial";
 
@@ -355,11 +481,7 @@ async function executeAction(page, action, plan, rowData) {
       }
 
       case "click": {
-        const element = await findElementByTextOrSelector(page, action.target);
-        if (!element) {
-          throw new Error(`Click target not found: ${action.target}`);
-        }
-        await element.click();
+        await clickByTextOrSelector(page, action.target);
         return { type: action.type, target: action.target, success: true };
       }
 
@@ -370,9 +492,9 @@ async function executeAction(page, action, plan, rowData) {
       }
 
       case "handleDialog": {
-        page.on("dialog", async (dialog) => {
-          await dialog.accept();
-        });
+        // Backward-compatible: action ini mengaktifkan auto-accept dialog.
+        // Namun handler idealnya sudah dipasang dari awal sebelum click terjadi.
+        installDialogAutoAcceptIfNeeded(page, plan, true);
         return { type: action.type, success: true };
       }
 
@@ -467,35 +589,193 @@ async function findElementByLabel(page, labels, fallbackLabels, fieldType) {
  * Find element by text or selector
  */
 async function findElementByTextOrSelector(page, target) {
-  // Coba sebagai selector CSS dulu
+  return await getClickableLocator(page, target);
+}
+
+function escapeForCssString(value) {
+  return String(value).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
+function escapeForRegex(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+async function getClickableLocator(page, target) {
+  if (!target) return null;
+  const t = String(target).trim();
+  if (!t) return null;
+  const exactTextRe = new RegExp(`^\\s*${escapeForRegex(t)}\\s*$`, "i");
+
+  // 1) Coba sebagai selector CSS (trial click)
   try {
-    const element = page.locator(target).first();
-    if (await element.isVisible({ timeout: 1000 })) {
-      return element;
-    }
+    const css = page.locator(t).first();
+    await css.click({ timeout: 5000, trial: true });
+    return css;
   } catch (e) {
-    // Bukan selector, lanjut ke text search
+    // lanjut
   }
 
-  // Cari berdasarkan text
-  const textSelectors = [
-    `button:text-is("${target}")`,
-    `a:has-text("${target}")`,
-    `*:has-text("${target}")`,
+  // 2) Role-based (paling akurat untuk button/link)
+  try {
+    const btnExact = page.getByRole("button", { name: t, exact: true }).first();
+    await btnExact.click({ timeout: 5000, trial: true });
+    return btnExact;
+  } catch (e) {
+    // lanjut
+  }
+
+  // 2b) Role-based regex (tahan whitespace/icon, tapi tetap EXACT agar tidak tabrakan:
+  // "Add" vs "Add Transaction")
+  try {
+    const btnRegex = page
+      .getByRole("button", {
+        name: exactTextRe,
+      })
+      .first();
+    await btnRegex.click({ timeout: 5000, trial: true });
+    return btnRegex;
+  } catch (e) {
+    // lanjut
+  }
+
+  // 2c) Filter berbasis textContent yang EXACT (untuk button submit dengan icon)
+  try {
+    const btnByTextExact = page
+      .locator("button")
+      .filter({ hasText: exactTextRe })
+      .first();
+    await btnByTextExact.click({ timeout: 5000, trial: true });
+    return btnByTextExact;
+  } catch (e) {
+    // lanjut
+  }
+
+  try {
+    const btn = page.getByRole("button", { name: t }).first();
+    await btn.click({ timeout: 5000, trial: true });
+    return btn;
+  } catch (e) {
+    // lanjut
+  }
+
+  try {
+    const linkExact = page.getByRole("link", { name: t, exact: true }).first();
+    await linkExact.click({ timeout: 5000, trial: true });
+    return linkExact;
+  } catch (e) {
+    // lanjut
+  }
+
+  // Link exact regex (hindari collision label pendek)
+  try {
+    const linkRegex = page.getByRole("link", { name: exactTextRe }).first();
+    await linkRegex.click({ timeout: 5000, trial: true });
+    return linkRegex;
+  } catch (e) {
+    // lanjut
+  }
+
+  try {
+    const link = page.getByRole("link", { name: t }).first();
+    await link.click({ timeout: 5000, trial: true });
+    return link;
+  } catch (e) {
+    // lanjut
+  }
+
+  // 3) Fallback CSS text selectors (lebih aman daripada *:has-text global)
+  const esc = escapeForCssString(t);
+  const candidates = [
+    `button:has-text("${esc}")`,
+    `a:has-text("${esc}")`,
+    `[role="button"]:has-text("${esc}")`,
+    `[role="menuitem"]:has-text("${esc}")`,
+    `input[type="submit"][value="${esc}"]`,
   ];
 
-  for (const selector of textSelectors) {
+  for (const sel of candidates) {
     try {
-      const element = page.locator(selector).first();
-      if (await element.isVisible({ timeout: 1000 })) {
-        return element;
-      }
+      const loc = page.locator(sel).first();
+      await loc.click({ timeout: 5000, trial: true });
+      return loc;
     } catch (e) {
       continue;
     }
   }
 
+  // 4) Cari text lalu naik ke ancestor yang clickable
+  try {
+    const textLoc = page.getByText(t, { exact: true }).first();
+    const ancestorButton = textLoc.locator("xpath=ancestor-or-self::button[1]");
+    await ancestorButton.click({ timeout: 5000, trial: true });
+    return ancestorButton;
+  } catch (e) {
+    // lanjut
+  }
+
+  try {
+    const textLoc = page.getByText(t).first();
+    const ancestorRoleButton = textLoc.locator(
+      'xpath=ancestor-or-self::*[@role="button"][1]'
+    );
+    await ancestorRoleButton.click({ timeout: 5000, trial: true });
+    return ancestorRoleButton;
+  } catch (e) {
+    // lanjut
+  }
+
+  try {
+    const textLoc = page.getByText(t).first();
+    const ancestorLink = textLoc.locator("xpath=ancestor-or-self::a[1]");
+    await ancestorLink.click({ timeout: 5000, trial: true });
+    return ancestorLink;
+  } catch (e) {
+    // lanjut
+  }
+
   return null;
+}
+
+async function clickByTextOrSelector(page, target) {
+  const locator = await getClickableLocator(page, target);
+  if (!locator) {
+    throw new Error(`Click target not found: ${target}`);
+  }
+
+  // Pastikan terlihat di viewport dulu
+  try {
+    await locator.scrollIntoViewIfNeeded({ timeout: 2000 });
+  } catch (e) {
+    // abaikan
+  }
+
+  // Coba click normal dulu (biarkan Playwright auto-wait)
+  try {
+    await locator.click({ timeout: 10000 });
+    return;
+  } catch (e) {
+    // fallback: force click (untuk kasus overlay / pointer-events aneh)
+  }
+
+  await locator.click({ timeout: 10000, force: true });
+}
+
+function installDialogAutoAcceptIfNeeded(page, plan, force = false) {
+  const shouldInstall =
+    force ||
+    (Array.isArray(plan?.actions) &&
+      plan.actions.some((a) => a?.type === "handleDialog"));
+  if (!shouldInstall) return;
+  if (page.__privylensDialogAutoAcceptInstalled) return;
+  page.__privylensDialogAutoAcceptInstalled = true;
+
+  page.on("dialog", async (dialog) => {
+    try {
+      await dialog.accept();
+    } catch (e) {
+      // no-op
+    }
+  });
 }
 
 /**
@@ -545,5 +825,4 @@ async function checkIndicator(page, indicator) {
   }
 }
 
-// Export fungsi utama saja, helper functions tetap internal
-export { executeAutomationPlan };
+// Catatan: executeAutomationPlan sudah diekspor via `export async function ...` di atas.

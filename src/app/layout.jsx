@@ -1,5 +1,6 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
+import "@xyflow/react/dist/style.css";
 import Header from "@/components/Header";
 
 const inter = Inter({
@@ -8,16 +9,17 @@ const inter = Inter({
 });
 
 export const metadata = {
-  title: "PrivyLens - Document Analysis",
-  description: "Offline-first document analysis tool",
+  title: "PrivyLens — Automation Plan Builder",
+  description:
+    "Rancang dan jalankan automation plan untuk pengisian form berbasis browser menggunakan Playwright.",
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body className={`${inter.variable} antialiased`}>
+    <html lang="id">
+      <body className={`${inter.className} antialiased`}>
         <Header />
-        {children}
+        <main>{children}</main>
       </body>
     </html>
   );

@@ -84,7 +84,7 @@ export default function FieldMappingSection({
         </h2>
         <button
           onClick={addFieldMapping}
-          className="px-2 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs font-medium"
+          className="px-2 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs font-medium cursor-pointer"
         >
           + Field
         </button>
@@ -188,7 +188,7 @@ export default function FieldMappingSection({
                         {fm.labels.length > 1 && (
                           <button
                             onClick={() => removeLabel(idx, labelIdx)}
-                            className="px-2 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded-lg"
+                            className="px-2 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
                           >
                             Hapus
                           </button>
@@ -197,7 +197,7 @@ export default function FieldMappingSection({
                     ))}
                     <button
                       onClick={() => addLabel(idx)}
-                      className="text-xs text-blue-600 hover:text-blue-800"
+                      className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer"
                     >
                       + Tambah Label Alternatif
                     </button>
@@ -223,7 +223,7 @@ export default function FieldMappingSection({
                         />
                         <button
                           onClick={() => removeFallbackLabel(idx, labelIdx)}
-                          className="px-2 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded-lg"
+                          className="px-2 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
                         >
                           Hapus
                         </button>
@@ -231,7 +231,7 @@ export default function FieldMappingSection({
                     ))}
                     <button
                       onClick={() => addFallbackLabel(idx)}
-                      className="text-xs text-blue-600 hover:text-blue-800"
+                      className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer"
                     >
                       + Tambah Label Cadangan
                     </button>
@@ -284,7 +284,7 @@ export default function FieldMappingSection({
 
               <button
                 onClick={() => removeFieldMapping(idx)}
-                className="ml-4 px-2 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded-lg"
+                className="ml-4 px-2 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
               >
                 Hapus
               </button>
@@ -294,7 +294,7 @@ export default function FieldMappingSection({
 
         {fieldMappings.length === 0 && (
           <p className="text-center text-gray-500 py-8">
-            Belum ada field mapping. Klik tombol "+ Field" untuk menambahkan.
+            Belum ada field mapping. Klik tombol &quot;+ Field&quot; untuk menambahkan.
           </p>
         )}
       </div>

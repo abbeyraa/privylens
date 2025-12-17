@@ -1,8 +1,6 @@
-"use client";
-
-import AutomatePage from "./automate/page";
+import EditorPage from "./editor/page";
 
 export default function Home() {
-  // Home langsung merender halaman Automate (Automation Plan Builder)
-  return <AutomatePage />;
+  // Home langsung merender Editor (node-based)
+  return <EditorPage />;
 }

@@ -21,29 +21,37 @@ export default function AutomationPlanPreview({ plan, effectiveRows }) {
           Pratinjau Automation Plan
         </summary>
         <div className="space-y-2 mt-2 max-h-[400px] overflow-y-auto">
-        {/* Target */}
-        <div className="border-l-4 border-blue-500 pl-4">
-          <h3 className="font-semibold text-gray-700 mb-2">Target</h3>
-          <div className="text-sm text-gray-600 space-y-1">
-            <p>
-              <span className="font-medium">URL:</span> {plan.target.url}
-            </p>
-            <p>
-              <span className="font-medium">Metode Sesi:</span>{" "}
-              {plan.target.sessionMethod === "new" ? "Sesi Baru" : "Gunakan Sesi Login"}
-            </p>
-            {plan.target.sessionId && (
+          {/* Target */}
+          <div className="border-l-4 border-blue-500 pl-4">
+            <h3 className="font-semibold text-gray-700 mb-2">Target</h3>
+            <div className="text-sm text-gray-600 space-y-1">
               <p>
-                <span className="font-medium">Session ID:</span> {plan.target.sessionId}
+                <span className="font-medium">URL:</span> {plan.target.url}
               </p>
-            )}
-            <p>
-              <span className="font-medium">Page Ready Indicator:</span>{" "}
-              {plan.target.pageReadyIndicator.type} ={" "}
-              {plan.target.pageReadyIndicator.value}
-            </p>
+              <p>
+                <span className="font-medium">Login:</span>{" "}
+                {plan.target.login ? "Ya" : "Tidak"}
+              </p>
+              {plan.target.login?.url && (
+                <p>
+                  <span className="font-medium">Login URL:</span>{" "}
+                  {plan.target.login.url}
+                </p>
+              )}
+              {Array.isArray(plan.target.navigation) &&
+                plan.target.navigation.length > 0 && (
+                  <p>
+                    <span className="font-medium">Langkah Navigasi:</span>{" "}
+                    {plan.target.navigation.length} langkah
+                  </p>
+                )}
+              <p>
+                <span className="font-medium">Page Ready Indicator:</span>{" "}
+                {plan.target.pageReadyIndicator.type} ={" "}
+                {plan.target.pageReadyIndicator.value}
+              </p>
+            </div>
           </div>
-        </div>
 
         {/* Data Source */}
         <div className="border-l-4 border-green-500 pl-4">
@@ -121,15 +129,45 @@ export default function AutomationPlanPreview({ plan, effectiveRows }) {
           )}
         </div>
 
+        {/* Execution (Loop) */}
+        {plan.execution?.mode === "loop" && plan.execution?.loop?.indicator && (
+          <div className="border-l-4 border-slate-500 pl-4">
+            <h3 className="font-semibold text-gray-700 mb-2">Eksekusi (Loop)</h3>
+            <div className="text-sm text-gray-600 space-y-1">
+              <p>
+                <span className="font-medium">Max iterasi:</span>{" "}
+                {plan.execution.loop.maxIterations ?? 50}
+              </p>
+              <p>
+                <span className="font-medium">Delay:</span>{" "}
+                {plan.execution.loop.delaySeconds ?? 0}s
+              </p>
+              <p>
+                <span className="font-medium">Stop saat:</span>{" "}
+                {plan.execution.loop.stopWhen === "visible"
+                  ? "Terlihat/Ada"
+                  : "Hilang/Tidak ada"}
+              </p>
+              <p>
+                <span className="font-medium">Indikator:</span>{" "}
+                {plan.execution.loop.indicator.type} ={" "}
+                {plan.execution.loop.indicator.value}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Indicators */}
         <div className="border-l-4 border-red-500 pl-4">
           <h3 className="font-semibold text-gray-700 mb-2">Indikator Hasil</h3>
           <div className="text-sm text-gray-600 space-y-1">
             <p>
               <span className="font-medium text-green-600">Keberhasilan:</span>{" "}
-              {plan.successIndicator.type} = {plan.successIndicator.value}
+              {plan.successIndicator?.type && plan.successIndicator?.value
+                ? `${plan.successIndicator.type} = ${plan.successIndicator.value}`
+                : "Tidak didefinisikan"}
             </p>
-            {plan.failureIndicator && (
+            {plan.failureIndicator?.type && plan.failureIndicator?.value && (
               <p>
                 <span className="font-medium text-red-600">Kegagalan:</span>{" "}
                 {plan.failureIndicator.type} = {plan.failureIndicator.value}

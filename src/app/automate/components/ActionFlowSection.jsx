@@ -8,12 +8,18 @@ export default function ActionFlowSection({
   setSuccessIndicator,
   failureIndicator,
   setFailureIndicator,
+  execution,
+  setExecution,
+  allowFill = true,
 }) {
+  // Mode eksekusi (once/loop) hanya relevan untuk Action-only (tanpa fill/data-driven)
+  const showExecutionOptions = allowFill === false;
+
   const addAction = () => {
     setActions([
       ...actions,
       {
-        type: "fill",
+        type: allowFill ? "fill" : "click",
         target: "",
         value: null,
         waitFor: null,
@@ -41,24 +47,231 @@ export default function ActionFlowSection({
     return [];
   };
 
+  const effectiveExecution = showExecutionOptions
+    ? execution || {
+        mode: "once",
+        loop: {
+          maxIterations: 50,
+          delaySeconds: 0,
+          stopWhen: "notVisible",
+          indicator: { type: "selector", value: "" },
+        },
+      }
+    : null;
+
   return (
     <div className="bg-white rounded-lg shadow-md p-3 h-full flex flex-col">
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-base font-semibold text-gray-800">Alur Aksi</h2>
         <button
           onClick={addAction}
-          className="px-2 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs font-medium"
+          className="px-2 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs font-medium cursor-pointer"
         >
           + Aksi
         </button>
       </div>
 
       <p className="text-xs text-gray-600 mb-2">
-        Definisikan urutan aksi yang akan dieksekusi SETELAH sampai di halaman
-        target. Aksi akan dijalankan secara berurutan. Untuk mode batch, alur
-        ini akan di-loop untuk setiap baris data. Contoh: Klik tombol "Tambah
-        Data" → Isi form → Handle popup → Kembali ke halaman awal.
+        {allowFill ? (
+          <>
+            Definisikan urutan aksi yang akan dieksekusi SETELAH sampai di
+            halaman target. Aksi akan dijalankan secara berurutan. Untuk mode
+            batch, alur ini akan di-loop untuk setiap baris data. Contoh: Klik
+            tombol &quot;Tambah Data&quot; → Isi form → Handle popup → Kembali
+            ke halaman awal.
+          </>
+        ) : (
+          <>
+            Definisikan urutan aksi (click/wait/navigate/handleDialog) yang akan
+            dieksekusi di halaman target. Mode Action-only mendukung eksekusi
+            berulang (loop) sampai kondisi tertentu terpenuhi, misalnya berhenti
+            saat data sudah habis.
+          </>
+        )}
       </p>
+
+      {/* Execution Mode (khusus Action-only) */}
+      {showExecutionOptions && effectiveExecution && (
+        <div className="mb-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+          <h3 className="text-sm font-semibold text-gray-800 mb-2">
+            Mode Eksekusi
+          </h3>
+          <div className="flex gap-4">
+            <label className="flex items-center text-sm">
+              <input
+                type="radio"
+                className="mr-2"
+                checked={effectiveExecution.mode === "once"}
+                onChange={() => {
+                  setExecution?.({
+                    ...effectiveExecution,
+                    mode: "once",
+                  });
+                }}
+              />
+              Sekali jalan
+            </label>
+            <label className="flex items-center text-sm">
+              <input
+                type="radio"
+                className="mr-2"
+                checked={effectiveExecution.mode === "loop"}
+                onChange={() => {
+                  setExecution?.({
+                    ...effectiveExecution,
+                    mode: "loop",
+                  });
+                }}
+              />
+              Loop sampai kondisi
+            </label>
+          </div>
+
+          {effectiveExecution.mode === "loop" && (
+            <div className="mt-3 space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Max iterasi
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={effectiveExecution.loop?.maxIterations ?? 50}
+                    onChange={(e) =>
+                      setExecution?.({
+                        ...effectiveExecution,
+                        loop: {
+                          ...effectiveExecution.loop,
+                          maxIterations: Number(e.target.value || 1),
+                        },
+                      })
+                    }
+                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Delay per iterasi (detik)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={effectiveExecution.loop?.delaySeconds ?? 0}
+                    onChange={(e) =>
+                      setExecution?.({
+                        ...effectiveExecution,
+                        loop: {
+                          ...effectiveExecution.loop,
+                          delaySeconds: Number(e.target.value || 0),
+                        },
+                      })
+                    }
+                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Stop condition
+                </label>
+                <div className="flex gap-2">
+                  <select
+                    value={
+                      effectiveExecution.loop?.indicator?.type || "selector"
+                    }
+                    onChange={(e) =>
+                      setExecution?.({
+                        ...effectiveExecution,
+                        loop: {
+                          ...effectiveExecution.loop,
+                          indicator: {
+                            ...(effectiveExecution.loop?.indicator || {
+                              type: "selector",
+                              value: "",
+                            }),
+                            type: e.target.value,
+                          },
+                        },
+                      })
+                    }
+                    className="px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="selector">CSS Selector</option>
+                    <option value="text">Teks</option>
+                    <option value="url">URL Pattern</option>
+                  </select>
+                  <input
+                    type="text"
+                    value={effectiveExecution.loop?.indicator?.value || ""}
+                    onChange={(e) =>
+                      setExecution?.({
+                        ...effectiveExecution,
+                        loop: {
+                          ...effectiveExecution.loop,
+                          indicator: {
+                            ...(effectiveExecution.loop?.indicator || {
+                              type: "selector",
+                              value: "",
+                            }),
+                            value: e.target.value,
+                          },
+                        },
+                      })
+                    }
+                    placeholder="Contoh: .btn-delete atau teks 'Tidak ada data'"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div className="mt-2 flex gap-4 text-sm">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      className="mr-2"
+                      checked={effectiveExecution.loop?.stopWhen === "visible"}
+                      onChange={() =>
+                        setExecution?.({
+                          ...effectiveExecution,
+                          loop: {
+                            ...effectiveExecution.loop,
+                            stopWhen: "visible",
+                          },
+                        })
+                      }
+                    />
+                    Stop saat terlihat/ada
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      className="mr-2"
+                      checked={
+                        effectiveExecution.loop?.stopWhen === "notVisible"
+                      }
+                      onChange={() =>
+                        setExecution?.({
+                          ...effectiveExecution,
+                          loop: {
+                            ...effectiveExecution.loop,
+                            stopWhen: "notVisible",
+                          },
+                        })
+                      }
+                    />
+                    Stop saat hilang/tidak ada
+                  </label>
+                </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  Contoh bulk delete: set indikator ke selector tombol delete,
+                  lalu pilih “Stop saat hilang/tidak ada” agar loop berhenti
+                  ketika item habis.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="space-y-2 flex-1 overflow-y-auto max-h-[calc(100vh-200px)]">
         {actions.map((action, idx) => (
@@ -78,7 +291,7 @@ export default function ActionFlowSection({
                     onChange={(e) => updateAction(idx, "type", e.target.value)}
                     className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
-                    <option value="fill">Isi Field</option>
+                    {allowFill && <option value="fill">Isi Field</option>}
                     <option value="click">Klik Tombol/Elemen</option>
                     <option value="wait">Tunggu</option>
                     <option value="handleDialog">Tangani Dialog</option>
@@ -215,7 +428,7 @@ export default function ActionFlowSection({
 
               <button
                 onClick={() => removeAction(idx)}
-                className="ml-4 px-2 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded-lg"
+                className="ml-4 px-2 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
               >
                 Hapus
               </button>
@@ -225,8 +438,8 @@ export default function ActionFlowSection({
 
         {actions.length === 0 && (
           <p className="text-center text-gray-500 py-8">
-            Belum ada aksi yang didefinisikan. Klik tombol "+ Aksi" untuk
-            menambahkan.
+            Belum ada aksi yang didefinisikan. Klik tombol &quot;+ Aksi&quot;
+            untuk menambahkan.
           </p>
         )}
       </div>
@@ -240,7 +453,7 @@ export default function ActionFlowSection({
         {/* Success Indicator */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Indikator Keberhasilan <span className="text-red-500">*</span>
+            Indikator Keberhasilan (Opsional)
           </label>
           <div className="flex gap-2">
             <select

@@ -133,7 +133,7 @@ export default function TargetConfiguration({
               </label>
               <button
                 onClick={addNavigationStep}
-                className="px-2 py-0.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="px-2 py-0.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer"
               >
                 + Langkah
               </button>
@@ -164,7 +164,7 @@ export default function TargetConfiguration({
                     </select>
                     <button
                       onClick={() => removeNavigationStep(idx)}
-                      className="px-1.5 py-1 text-xs text-red-600 hover:bg-red-50 rounded"
+                      className="px-1.5 py-1 text-xs text-red-600 hover:bg-red-50 rounded cursor-pointer"
                     >
                       ×
                     </button>
