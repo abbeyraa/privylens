@@ -115,6 +115,25 @@ export default function EditorPage() {
   const [activePanel, setActivePanel] = useState("target");
   const [selectedNode, setSelectedNode] = useState(null);
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
+  const [contextMenu, setContextMenu] = useState(null);
+
+  /* -----------------------------------
+     Effect: Handle ESC key untuk menutup context menu
+  ----------------------------------- */
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape" && contextMenu) {
+        setContextMenu(null);
+      }
+    };
+
+    if (contextMenu) {
+      window.addEventListener("keydown", handleKeyDown);
+      return () => {
+        window.removeEventListener("keydown", handleKeyDown);
+      };
+    }
+  }, [contextMenu]);
 
   /* -----------------------------------
      Handler: Custom onNodesChange untuk mencegah penghapusan node target dan preview
@@ -607,6 +626,9 @@ export default function EditorPage() {
      Handler: klik node di canvas
   ----------------------------------- */
   const onNodeClick = (_, node) => {
+    // Tutup context menu jika ada
+    setContextMenu(null);
+    
     // Handle action node
     if (node.type === "action") {
       // Jika node yang sama diklik lagi, tutup panel (toggle)
@@ -638,12 +660,42 @@ export default function EditorPage() {
   };
 
   /* -----------------------------------
+     Handler: klik kanan di node (prevent context menu)
+  ----------------------------------- */
+  const onNodeContextMenu = (event) => {
+    // Prevent context menu saat klik kanan di node
+    event.preventDefault();
+    setContextMenu(null);
+  };
+
+  /* -----------------------------------
    Handler: klik di canvas (bukan di node)
 ----------------------------------- */
   const onPaneClick = () => {
-    // Tutup panel saat klik di area kosong canvas
+    // Tutup panel dan context menu saat klik di area kosong canvas
     setIsDetailOpen(false);
     setSelectedNode(null);
+    setContextMenu(null);
+  };
+
+  /* -----------------------------------
+   Handler: klik kanan di canvas untuk context menu
+----------------------------------- */
+  const onPaneContextMenu = (event) => {
+    event.preventDefault();
+    
+    // Dapatkan posisi klik kanan
+    const position = reactFlowInstance?.screenToFlowPosition({
+      x: event.clientX,
+      y: event.clientY,
+    }) || { x: 0, y: 0 };
+
+    // Tampilkan context menu di posisi klik
+    setContextMenu({
+      x: event.clientX,
+      y: event.clientY,
+      flowPosition: position,
+    });
   };
 
   /* -----------------------------------
@@ -686,6 +738,29 @@ export default function EditorPage() {
     } else if (data.type === "action") {
       handleAddActionNodeAtPosition(position);
     }
+  };
+
+  /* -----------------------------------
+     Handler: Tambah node dari context menu
+  ----------------------------------- */
+  const handleAddNodeFromContextMenu = (nodeType) => {
+    if (!contextMenu) return;
+
+    const position = contextMenu.flowPosition;
+
+    if (nodeType === "dataSource") {
+      if (hasDataSourceNode) {
+        // Node sumber data sudah ada, tidak bisa ditambahkan lagi
+        setContextMenu(null);
+        return;
+      }
+      handleAddDataSourceNodeAtPosition(position);
+    } else if (nodeType === "action") {
+      handleAddActionNodeAtPosition(position);
+    }
+
+    // Tutup context menu setelah menambahkan node
+    setContextMenu(null);
   };
 
   /* -----------------------------------
@@ -1086,7 +1161,9 @@ export default function EditorPage() {
             onNodesChange={handleNodesChange}
             onEdgesChange={onEdgesChange}
             onNodeClick={onNodeClick}
+            onNodeContextMenu={onNodeContextMenu}
             onPaneClick={onPaneClick}
+            onPaneContextMenu={onPaneContextMenu}
             onNodeDragStop={onNodeDragStop}
             onDrop={onDrop}
             onDragOver={onDragOver}
@@ -1097,6 +1174,56 @@ export default function EditorPage() {
             <Controls />
             <Background />
           </ReactFlow>
+          
+          {/* Context Menu untuk klik kanan */}
+          {contextMenu && (
+            <>
+              {/* Overlay untuk menutup context menu saat klik di luar */}
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setContextMenu(null)}
+              />
+              <div
+                className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[200px]"
+                style={{
+                  left: contextMenu.x,
+                  top: contextMenu.y,
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  onClick={() => handleAddNodeFromContextMenu("dataSource")}
+                  disabled={hasDataSourceNode}
+                  className={[
+                    "w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors",
+                    hasDataSourceNode
+                      ? "text-gray-400 cursor-not-allowed opacity-50"
+                      : "text-gray-700 cursor-pointer",
+                  ].join(" ")}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">📊</span>
+                    <div>
+                      <div className="font-medium">Sumber Data</div>
+                      <div className="text-xs text-gray-500">CSV/XLSX/manual</div>
+                    </div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => handleAddNodeFromContextMenu("action")}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">⚡</span>
+                    <div>
+                      <div className="font-medium">Alur Aksi</div>
+                      <div className="text-xs text-gray-500">fill/click/wait/navigate</div>
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
       {/* ============== END SECTION: CANVAS FULL SCREEN ============= */}
