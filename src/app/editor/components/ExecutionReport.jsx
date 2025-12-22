@@ -1,35 +1,28 @@
 "use client";
 
+// Constants untuk status styling
+const STATUS_COLORS = {
+  success: "bg-green-100 text-green-800 border-green-300",
+  partial: "bg-yellow-100 text-yellow-800 border-yellow-300",
+  error: "bg-red-100 text-red-800 border-red-300",
+  failed: "bg-red-100 text-red-800 border-red-300",
+  default: "bg-gray-100 text-gray-800 border-gray-300",
+};
+
+const STATUS_ICONS = {
+  success: "✓",
+  partial: "⚠",
+  error: "✗",
+  failed: "✗",
+  default: "?",
+};
+
+// Helper functions
+const getStatusColor = (status) => STATUS_COLORS[status] || STATUS_COLORS.default;
+const getStatusIcon = (status) => STATUS_ICONS[status] || STATUS_ICONS.default;
+
 export default function ExecutionReport({ report }) {
   if (!report) return null;
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "success":
-        return "bg-green-100 text-green-800 border-green-300";
-      case "partial":
-        return "bg-yellow-100 text-yellow-800 border-yellow-300";
-      case "error":
-      case "failed":
-        return "bg-red-100 text-red-800 border-red-300";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-300";
-    }
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case "success":
-        return "✓";
-      case "partial":
-        return "⚠";
-      case "error":
-      case "failed":
-        return "✗";
-      default:
-        return "?";
-    }
-  };
 
   return (
     <div className="bg-white rounded-lg shadow-md p-3">

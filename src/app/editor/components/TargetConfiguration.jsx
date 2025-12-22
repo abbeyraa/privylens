@@ -42,12 +42,12 @@ export default function TargetConfiguration({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-3 h-full flex flex-col">
+    <div className="bg-white rounded-lg shadow-md p-3 h-full flex flex-col min-w-0">
       <h2 className="text-base font-semibold text-gray-800 mb-2">
         Konfigurasi Target
       </h2>
 
-      <div className="space-y-2 flex-1 overflow-y-auto max-h-[calc(100vh-200px)]">
+      <div className="space-y-2 flex-1 overflow-y-auto overflow-x-hidden max-h-[calc(100vh-200px)] min-w-0">
         {/* Target URL */}
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">

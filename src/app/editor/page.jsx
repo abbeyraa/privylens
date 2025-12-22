@@ -1,64 +1,62 @@
 "use client";
 
+/* ==========================
+   Import dependencies & komponen
+========================== */
 import { useEffect, useMemo, useState } from "react";
 import {
   Background,
   Controls,
-  MiniMap,
   ReactFlow,
   useEdgesState,
   useNodesState,
 } from "@xyflow/react";
-
 import { extractAllRows, getXlsxSheets } from "@/lib/api";
 import { runAutomation } from "@/app/actions/runAutomation";
-
-import TargetConfiguration from "@/app/automate/components/TargetConfiguration";
-import DataSourceSection from "@/app/automate/components/DataSourceSection";
-import FieldMappingSection from "@/app/automate/components/FieldMappingSection";
-import ActionFlowSection from "@/app/automate/components/ActionFlowSection";
-import AutomationPlanPreview from "@/app/automate/components/AutomationPlanPreview";
-import ExecutionReport from "@/app/automate/components/ExecutionReport";
-
+import TargetConfiguration from "@/app/editor/components/TargetConfiguration";
+import DataSourceSection from "@/app/editor/components/DataSourceSection";
+import FieldMappingSection from "@/app/editor/components/FieldMappingSection";
+import ActionFlowSection from "@/app/editor/components/ActionFlowSection";
+import AutomationPlanPreview from "@/app/editor/components/AutomationPlanPreview";
+import ExecutionReport from "@/app/editor/components/ExecutionReport";
 import CardNode from "./components/CardNode";
+import AddDataSourceNode from "./components/AddDataSourceNode";
+import PaletteNode from "./components/PaletteNode";
+import ActionNode from "./components/ActionNode";
+import ActionNodeEditor from "./components/ActionNodeEditor";
+import { useEditor } from "./context/EditorContext";
+import {
+  NODE_IDS,
+  NODE_SPACING,
+  DEFAULT_POSITIONS,
+  findNodeById,
+  filterNodesByIds,
+  getActionNodes,
+  sortNodesByY,
+  getLastNodeY,
+  generateActionId,
+  determineActionSource,
+  isLastAction,
+  calculateActionPosition,
+} from "./utils/nodeHelpers";
+import {
+  createEdge,
+  filterEdgesByNodes,
+  filterEdgesByNode,
+  findEdgeByTarget,
+  findEdgeBySource,
+  hasEdge,
+  reconnectEdgesAfterNodeDeletion,
+  reconnectEdgesAfterDataSourceDeletion,
+  createDataSourceEdges,
+} from "./utils/edgeHelpers";
+import { validateAutomationPlan } from "./utils/validationHelpers";
 
-function getEditorNodes(mode) {
-  if (mode === "actionOnly") {
-    return [
-      {
-        id: "target",
-        type: "card",
-        position: { x: 60, y: 70 },
-        data: {
-          title: "Target",
-          subtitle: "URL, login, navigasi, page-ready indicator",
-          panel: "target",
-        },
-      },
-      {
-        id: "actions",
-        type: "card",
-        position: { x: 60, y: 210 },
-        data: {
-          title: "Alur Aksi (Action-only)",
-          subtitle: "click/wait/navigate/handleDialog + loop trigger",
-          panel: "actions",
-        },
-      },
-      {
-        id: "preview",
-        type: "card",
-        position: { x: 60, y: 350 },
-        data: {
-          title: "Preview & Report",
-          subtitle: "Lihat plan dan hasil eksekusi",
-          panel: "preview",
-        },
-      },
-    ];
-  }
-
-  return [
+/* ==========================
+   Utility: Elemen node ReactFlow default
+========================== */
+function getDefaultNodes(hasDataSource = false) {
+  const baseNodes = [
     {
       id: "target",
       type: "card",
@@ -68,77 +66,286 @@ function getEditorNodes(mode) {
         subtitle: "URL, login, navigasi, page-ready indicator",
         panel: "target",
       },
-    },
-    {
-      id: "data",
-      type: "card",
-      position: { x: 60, y: 150 },
-      data: {
-        title: "Sumber Data",
-        subtitle: "CSV/XLSX atau manual",
-        panel: "data",
-      },
-    },
-    {
-      id: "mapping",
-      type: "card",
-      position: { x: 60, y: 260 },
-      data: {
-        title: "Field Mapping",
-        subtitle: "Nama bisnis → label di halaman → dataKey",
-        panel: "mapping",
-      },
-    },
-    {
-      id: "actions",
-      type: "card",
-      position: { x: 60, y: 370 },
-      data: {
-        title: "Alur Aksi",
-        subtitle: "fill/click/wait/navigate + indikator hasil",
-        panel: "actions",
-      },
+      deletable: false, // Node tidak bisa dihapus
     },
     {
       id: "preview",
       type: "card",
-      position: { x: 60, y: 480 },
+      position: { x: 60, y: 200 },
       data: {
         title: "Preview & Report",
         subtitle: "Lihat plan dan hasil eksekusi",
         panel: "preview",
       },
+      deletable: false, // Node tidak bisa dihapus
     },
   ];
+
+  return baseNodes;
 }
 
-function getEditorEdges(mode) {
-  if (mode === "actionOnly") {
-    return [
-      { id: "e1", source: "target", target: "actions", animated: true },
-      { id: "e2", source: "actions", target: "preview", animated: true },
-    ];
-  }
-
+/* ==========================
+   Utility: Edge/graf ReactFlow default
+========================== */
+function getDefaultEdges() {
   return [
-    { id: "e1", source: "target", target: "data", animated: true },
-    { id: "e2", source: "data", target: "mapping", animated: true },
-    { id: "e3", source: "mapping", target: "actions", animated: true },
-    { id: "e4", source: "actions", target: "preview", animated: true },
+    // Edges akan dibuat dinamis berdasarkan node action yang ada
   ];
 }
 
+/* =============================================================
+   Komponen Utama: EditorPage
+============================================================= */
 export default function EditorPage() {
-  // ReactFlow state
-  const nodeTypes = useMemo(() => ({ card: CardNode }), []);
-  const [editorMode, setEditorMode] = useState("data"); // "data" | "actionOnly"
-  const [nodes, setNodes, onNodesChange] = useNodesState(
-    getEditorNodes("data")
+  /* -----------------------------------
+     ReactFlow state terkait canvas visual editor
+  ----------------------------------- */
+  const nodeTypes = useMemo(
+    () => ({
+      card: CardNode,
+      addDataSource: AddDataSourceNode,
+      action: ActionNode,
+    }),
+    []
   );
-  const [edges, setEdges, onEdgesChange] = useEdgesState(getEditorEdges("data"));
+  const [nodes, setNodes, onNodesChange] = useNodesState(
+    getDefaultNodes(false)
+  );
+  const [edges, setEdges, onEdgesChange] = useEdgesState(getDefaultEdges());
   const [activePanel, setActivePanel] = useState("target");
+  const [selectedNode, setSelectedNode] = useState(null);
+  const [reactFlowInstance, setReactFlowInstance] = useState(null);
 
-  // Target Configuration (sama seperti AutomatePage)
+  /* -----------------------------------
+     Handler: Custom onNodesChange untuk mencegah penghapusan node target dan preview
+     dan auto-hapus node data/mapping jika salah satunya dihapus
+  ----------------------------------- */
+  const handleNodesChange = (changes) => {
+    // Deteksi penghapusan node data atau mapping
+    const removeChanges = changes.filter((change) => change.type === "remove");
+    const nodesToRemove = new Set();
+
+    removeChanges.forEach((change) => {
+      const nodeId = change.id;
+      // Jika menghapus node data atau mapping, hapus keduanya
+      if (nodeId === "data" || nodeId === "mapping") {
+        nodesToRemove.add("data");
+        nodesToRemove.add("mapping");
+      } else {
+        nodesToRemove.add(nodeId);
+      }
+    });
+
+    // Filter out remove changes untuk node yang tidak boleh dihapus
+    const filteredChanges = changes.filter((change) => {
+      if (change.type === "remove") {
+        const nodeId = change.id;
+        // Mencegah penghapusan node target dan preview
+        if (nodeId === "target" || nodeId === "preview") {
+          return false;
+        }
+
+        // Jika node data atau mapping dihapus, handle secara khusus
+        if (nodeId === NODE_IDS.DATA || nodeId === NODE_IDS.MAPPING) {
+          // Hapus kedua node (data dan mapping) dan update edges
+          setNodes((prev) => {
+            const newNodes = filterNodesByIds(prev, [
+              NODE_IDS.DATA,
+              NODE_IDS.MAPPING,
+            ]);
+
+            // Update edges menggunakan helper function
+            setEdges((prevEdges) =>
+              reconnectEdgesAfterDataSourceDeletion(prevEdges, newNodes)
+            );
+
+            return newNodes;
+          });
+
+          // Reset data source state
+          setRows([]);
+          setManualRows([{}]);
+          setManualColumns(["field1"]);
+          setFieldMappings([]);
+
+          return false; // Jangan proses change ini lagi
+        }
+
+        // Handle penghapusan action node: auto-reconnect node sebelum dan sesudah
+        if (nodeId.startsWith("action-")) {
+          setNodes((prev) => {
+            const deletedNode = prev.find((n) => n.id === nodeId);
+            if (!deletedNode) return prev;
+
+            const newNodes = prev.filter((n) => n.id !== nodeId);
+            const remainingActionNodes = newNodes.filter(
+              (n) => n.type === "action"
+            );
+
+            // Update edges untuk reconnect
+            setEdges((prevEdges) => {
+              // Cari edge yang masuk ke node yang dihapus dan edge yang keluar
+              const incomingEdge = prevEdges.find((e) => e.target === nodeId);
+              const outgoingEdge = prevEdges.find((e) => e.source === nodeId);
+
+              // Hapus edge yang terkait dengan node yang dihapus
+              let newEdges = prevEdges.filter(
+                (e) => e.source !== nodeId && e.target !== nodeId
+              );
+
+              // Tentukan node sebelum dan sesudah berdasarkan posisi Y
+              const actionBefore = remainingActionNodes
+                .filter((n) => n.position.y < deletedNode.position.y)
+                .sort((a, b) => b.position.y - a.position.y)[0];
+
+              const actionAfter = remainingActionNodes
+                .filter((n) => n.position.y > deletedNode.position.y)
+                .sort((a, b) => a.position.y - b.position.y)[0];
+
+              // Reconnect logic
+              if (incomingEdge && outgoingEdge) {
+                // Node tengah: connect incoming source ke outgoing target
+                const newEdgeId = `e-${incomingEdge.source}-${outgoingEdge.target}`;
+                if (!newEdges.some((e) => e.id === newEdgeId)) {
+                  newEdges.push({
+                    id: newEdgeId,
+                    source: incomingEdge.source,
+                    target: outgoingEdge.target,
+                    animated: true,
+                  });
+                }
+              } else if (incomingEdge && !outgoingEdge) {
+                // Node terakhir: connect incoming ke preview
+                const newEdgeId = `e-${incomingEdge.source}-preview`;
+                if (!newEdges.some((e) => e.id === newEdgeId)) {
+                  newEdges.push({
+                    id: newEdgeId,
+                    source: incomingEdge.source,
+                    target: "preview",
+                    animated: true,
+                  });
+                }
+              } else if (!incomingEdge && outgoingEdge) {
+                // Node pertama: connect dari mapping/target ke outgoing target
+                const mappingNode = newNodes.find((n) => n.id === "mapping");
+                const sourceId = mappingNode ? "mapping" : "target";
+                const newEdgeId = `e-${sourceId}-${outgoingEdge.target}`;
+                if (!newEdges.some((e) => e.id === newEdgeId)) {
+                  newEdges.push({
+                    id: newEdgeId,
+                    source: sourceId,
+                    target: outgoingEdge.target,
+                    animated: true,
+                  });
+                }
+              }
+
+              // Pastikan action node terakhir selalu connect ke preview
+              if (remainingActionNodes.length > 0) {
+                const sortedActions = [...remainingActionNodes].sort(
+                  (a, b) => a.position.y - b.position.y
+                );
+                const lastAction = sortedActions[sortedActions.length - 1];
+                const lastActionToPreviewId = `e-${lastAction.id}-preview`;
+
+                if (!newEdges.some((e) => e.id === lastActionToPreviewId)) {
+                  // Hapus edge lain dari lastAction jika ada
+                  newEdges = newEdges.filter(
+                    (e) =>
+                      !(e.source === lastAction.id && e.target !== "preview")
+                  );
+                  newEdges.push({
+                    id: lastActionToPreviewId,
+                    source: lastAction.id,
+                    target: "preview",
+                    animated: true,
+                  });
+                }
+              } else {
+                // Tidak ada action node lagi, connect target/mapping langsung ke preview
+                const mappingNode = newNodes.find((n) => n.id === "mapping");
+                const sourceId = mappingNode ? "mapping" : "target";
+                const directToPreviewId = `e-${sourceId}-preview`;
+
+                if (!newEdges.some((e) => e.id === directToPreviewId)) {
+                  newEdges.push({
+                    id: directToPreviewId,
+                    source: sourceId,
+                    target: "preview",
+                    animated: true,
+                  });
+                }
+              }
+
+              return newEdges;
+            });
+
+            return newNodes;
+          });
+        }
+      }
+
+      // Pastikan node target dan preview selalu memiliki deletable: false
+      if (
+        change.type === "select" ||
+        change.type === "position" ||
+        change.type === "dimensions"
+      ) {
+        const nodeId = change.id;
+        if (nodeId === "target" || nodeId === "preview") {
+          // Pastikan properti deletable tetap false
+          setNodes((prev) =>
+            prev.map((node) => {
+              if (node.id === nodeId) {
+                return { ...node, deletable: false };
+              }
+              return node;
+            })
+          );
+        }
+      }
+      return true;
+    });
+
+    // Terapkan perubahan yang sudah difilter
+    if (filteredChanges.length > 0) {
+      onNodesChange(filteredChanges);
+    }
+  };
+
+  /* -----------------------------------
+     Effect: Pastikan node target dan preview selalu memiliki deletable: false saat mount
+  ----------------------------------- */
+  useEffect(() => {
+    // Set deletable: false untuk node target dan preview saat pertama kali
+    setNodes((prev) =>
+      prev.map((node) => {
+        if (
+          (node.id === "target" || node.id === "preview") &&
+          node.deletable !== false
+        ) {
+          return { ...node, deletable: false };
+        }
+        return node;
+      })
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Hanya sekali saat mount
+
+  // Track apakah node sumber data sudah ada
+  const hasDataSourceNode = useMemo(() => {
+    return nodes.some((node) => node.id === NODE_IDS.DATA);
+  }, [nodes]);
+
+  // Update context untuk header palette
+  const { setHasDataSourceNode: setContextHasDataSourceNode } = useEditor();
+  useEffect(() => {
+    setContextHasDataSourceNode(hasDataSourceNode);
+  }, [hasDataSourceNode, setContextHasDataSourceNode]);
+
+  /* -----------------------------------
+     State: Target Configuration (target URL, login, navigasi, page-ready)
+  ----------------------------------- */
   const [targetUrl, setTargetUrl] = useState("");
   const [requiresLogin, setRequiresLogin] = useState(false);
   const [loginUrl, setLoginUrl] = useState("");
@@ -148,7 +355,9 @@ export default function EditorPage() {
   const [pageReadyType, setPageReadyType] = useState("selector");
   const [pageReadyValue, setPageReadyValue] = useState("");
 
-  // Data Source
+  /* -----------------------------------
+     State: Data Source (jenis sumber data, data, sheet xlsx, dsb)
+  ----------------------------------- */
   const [dataSourceType, setDataSourceType] = useState("upload");
   const [rows, setRows] = useState([]);
   const [manualRows, setManualRows] = useState([{}]);
@@ -158,11 +367,16 @@ export default function EditorPage() {
   const [selectedSheet, setSelectedSheet] = useState("");
   const [selectedRowIndex, setSelectedRowIndex] = useState(0);
 
-  // Field Mappings
+  /* -----------------------------------
+     State: Field Mapping
+  ----------------------------------- */
   const [fieldMappings, setFieldMappings] = useState([]);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-  // Action Flow + Indicators
-  const [actions, setActions] = useState([]);
+  /* -----------------------------------
+     State: Action Flow & Indicator sukses/gagal
+     Actions sekarang disimpan sebagai nodes, bukan array terpisah
+  ----------------------------------- */
   const [successIndicator, setSuccessIndicator] = useState({
     type: "selector",
     value: "",
@@ -182,29 +396,49 @@ export default function EditorPage() {
     },
   });
 
-  // Execution
+  // Helper: Get action nodes dari nodes
+  const actionNodes = useMemo(() => {
+    return nodes.filter((n) => n.type === "action");
+  }, [nodes]);
+
+  // Helper: Get action data dari node
+  const getActionFromNode = (node) => {
+    if (node.type !== "action") return null;
+    return {
+      type: node.data?.actionType || "click",
+      target: node.data?.actionTarget || "",
+      value: node.data?.actionValue,
+      waitFor: node.data?.actionWaitFor,
+    };
+  };
+
+  /* -----------------------------------
+     State: Eksekusi automation plan
+  ----------------------------------- */
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionReport, setExecutionReport] = useState(null);
 
+  /* -----------------------------------
+     Memo: data yang berlaku
+  ----------------------------------- */
   const effectiveRows = useMemo(() => {
-    if (editorMode === "actionOnly") return [{}];
+    if (!hasDataSourceNode) return [{}];
     return dataSourceType === "manual" ? manualRows : rows;
-  }, [editorMode, dataSourceType, manualRows, rows]);
+  }, [hasDataSourceNode, dataSourceType, manualRows, rows]);
 
+  /* -----------------------------------
+     Memo: kolom dari rows
+  ----------------------------------- */
   const columns = useMemo(() => {
-    if (editorMode === "actionOnly") return [];
+    if (!hasDataSourceNode) return [];
     if (dataSourceType === "manual") return manualColumns;
     if (!effectiveRows.length) return [];
     return Object.keys(effectiveRows[0] || {});
-  }, [editorMode, dataSourceType, manualColumns, effectiveRows]);
+  }, [hasDataSourceNode, dataSourceType, manualColumns, effectiveRows]);
 
-  useEffect(() => {
-    setNodes(getEditorNodes(editorMode));
-    setEdges(getEditorEdges(editorMode));
-    setActivePanel("target");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editorMode]);
-
+  /* -----------------------------------
+     Handler: Saat file upload, ekstrak data
+  ----------------------------------- */
   const handleFileSelect = async (file) => {
     const ext = file.name.split(".").pop()?.toLowerCase();
     if (!["csv", "xlsx"].includes(ext)) {
@@ -225,6 +459,9 @@ export default function EditorPage() {
     }
   };
 
+  /* -----------------------------------
+     Handler: Saat sheet xlsx diganti, ekstrak data sheet tersebut
+  ----------------------------------- */
   const handleSheetChange = async (sheetName, file) => {
     setSelectedSheet(sheetName);
     if (file) {
@@ -233,6 +470,9 @@ export default function EditorPage() {
     }
   };
 
+  /* -----------------------------------
+     Membentuk automation plan yang siap dikirim untuk dieksekusi
+  ----------------------------------- */
   const generateAutomationPlan = () => {
     const plan = {
       target: {
@@ -252,7 +492,7 @@ export default function EditorPage() {
           navigation: navigationSteps,
         }),
       },
-      ...(editorMode === "data"
+      ...(hasDataSourceNode
         ? {
             dataSource: {
               type: dataSourceType,
@@ -273,8 +513,8 @@ export default function EditorPage() {
             })),
           }
         : {
-            // Mode action-only: dataSource & mapping tidak diperlukan,
-            // tapi tetap diset minimal agar runner aman.
+            /* Tanpa sumber data: dataSource & mapping tidak diperlukan,
+               tapi tetap diset minimal agar runner aman. */
             dataSource: {
               type: "manual",
               rows: [{}],
@@ -284,12 +524,22 @@ export default function EditorPage() {
             fieldMappings: [],
             execution,
           }),
-      actions: actions.map((action) => ({
-        type: action.type,
-        target: action.target,
-        ...(action.value !== undefined ? { value: action.value } : {}),
-        ...(action.waitFor ? { waitFor: action.waitFor } : {}),
-      })),
+      actions: actionNodes
+        .sort((a, b) => {
+          // Sort berdasarkan posisi Y (dari atas ke bawah)
+          return a.position.y - b.position.y;
+        })
+        .map((node) => {
+          const action = getActionFromNode(node);
+          if (!action) return null;
+          return {
+            type: action.type,
+            target: action.target,
+            ...(action.value !== undefined ? { value: action.value } : {}),
+            ...(action.waitFor ? { waitFor: action.waitFor } : {}),
+          };
+        })
+        .filter(Boolean),
       ...(successIndicator.value.trim()
         ? {
             successIndicator: {
@@ -311,35 +561,27 @@ export default function EditorPage() {
     return plan;
   };
 
+  /* -----------------------------------
+     Handler: Menjalankan automation plan
+  ----------------------------------- */
   const handleRun = async () => {
-    if (!targetUrl.trim()) return alert("Target URL harus diisi");
-    if (!pageReadyValue.trim()) return alert("Page Ready Indicator harus diisi");
+    const errors = validateAutomationPlan({
+      targetUrl,
+      pageReadyValue,
+      requiresLogin,
+      loginUrl,
+      loginUsername,
+      loginPassword,
+      hasDataSourceNode,
+      effectiveRows,
+      fieldMappings,
+      actionNodes,
+      getActionFromNode,
+      execution,
+    });
 
-    if (requiresLogin) {
-      if (!loginUrl.trim()) return alert("Login URL harus diisi");
-      if (!loginUsername.trim()) return alert("Username harus diisi");
-      if (!loginPassword.trim()) return alert("Password harus diisi");
-    }
-
-    if (editorMode === "data") {
-      if (!effectiveRows.length) return alert("Data source harus diisi");
-      if (!fieldMappings.length)
-        return alert("Minimal satu field mapping harus didefinisikan");
-    }
-    if (!actions.length) return alert("Minimal satu action harus didefinisikan");
-    if (editorMode === "actionOnly") {
-      const hasFill = actions.some((a) => a.type === "fill");
-      if (hasFill) {
-        return alert(
-          "Mode Action-only tidak mendukung aksi 'fill' tanpa Field Mapping. Gunakan click/wait/navigate/handleDialog."
-        );
-      }
-      if (execution?.mode === "loop") {
-        const maxIt = Number(execution.loop?.maxIterations || 0);
-        if (!maxIt || maxIt < 1) return alert("Max iterasi harus >= 1");
-        const stopValue = execution.loop?.indicator?.value?.trim();
-        if (!stopValue) return alert("Stop condition harus diisi untuk mode loop");
-      }
+    if (errors.length > 0) {
+      return alert(errors[0]);
     }
 
     setIsExecuting(true);
@@ -361,217 +603,717 @@ export default function EditorPage() {
     }
   };
 
+  /* -----------------------------------
+     Handler: klik node di canvas
+  ----------------------------------- */
   const onNodeClick = (_, node) => {
+    // Handle action node
+    if (node.type === "action") {
+      setSelectedNode(node);
+      setActivePanel("action");
+      setIsDetailOpen(true);
+      return;
+    }
+
     const panel = node?.data?.panel;
-    if (panel) setActivePanel(panel);
+    if (panel) {
+      setSelectedNode(null);
+      setActivePanel(
+        panel
+      ); /* pilih panel mana (target/data/mapping/action/preview) */
+      setIsDetailOpen(true); /* buka drawer kanan */
+    }
   };
 
+  /* -----------------------------------
+     Handler: ketika node di-drag dan di-drop
+  ----------------------------------- */
+  const onNodeDragStop = () => {
+    // Handler untuk drag stop node di canvas (jika diperlukan)
+  };
+
+  /* -----------------------------------
+     Handler: ketika drag over canvas (untuk drop dari palette)
+  ----------------------------------- */
+  const onDragOver = (event) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  };
+
+  /* -----------------------------------
+     Handler: ketika drop dari palette ke canvas
+  ----------------------------------- */
+  const onDrop = (event) => {
+    event.preventDefault();
+
+    const type = event.dataTransfer.getData("application/reactflow");
+    if (!type) return;
+
+    const data = JSON.parse(type);
+    const position = reactFlowInstance?.screenToFlowPosition({
+      x: event.clientX,
+      y: event.clientY,
+    }) || { x: 0, y: 0 };
+
+    // Cek apakah node sumber data sudah ada
+    if (data.type === "dataSource") {
+      if (hasDataSourceNode) {
+        // Node sumber data sudah ada, tidak bisa ditambahkan lagi
+        return;
+      }
+      handleAddDataSourceNodeAtPosition(position);
+    } else if (data.type === "action") {
+      handleAddActionNodeAtPosition(position);
+    }
+  };
+
+  /* -----------------------------------
+     Handler: Tambah node Action di posisi tertentu
+  ----------------------------------- */
+  const handleAddActionNodeAtPosition = (dropPosition) => {
+    // Gunakan timestamp + random untuk memastikan ID unik
+    const actionId = `action-${Date.now()}-${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+
+    // Hitung posisi Y otomatis jika ada action nodes lain
+    setNodes((prev) => {
+      const existingActionNodes = prev.filter((n) => n.type === "action");
+      let actionY = dropPosition.y;
+
+      // Jika ada action nodes, posisikan di bawah action terakhir
+      if (existingActionNodes.length > 0) {
+        const lastActionY = Math.max(
+          ...existingActionNodes.map((n) => n.position.y)
+        );
+        actionY = lastActionY + 110;
+      } else {
+        // Jika ini action pertama, posisikan di bawah mapping atau target
+        const mappingNode = prev.find((n) => n.id === "mapping");
+        const targetNode = prev.find((n) => n.id === "target");
+        if (mappingNode) {
+          actionY = mappingNode.position.y + 110;
+        } else if (targetNode) {
+          actionY = targetNode.position.y + 110;
+        }
+      }
+
+      const newActionNode = {
+        id: actionId,
+        type: "action",
+        position: { x: dropPosition.x || 60, y: actionY },
+        data: {
+          actionType: "click",
+          actionTarget: "",
+          actionValue: null,
+          actionWaitFor: null,
+        },
+      };
+
+      const updated = [...prev, newActionNode];
+      // Update edges langsung
+      updateEdgesForActionNode(actionId, updated, prev);
+      return updated;
+    });
+  };
+
+  /* -----------------------------------
+     Helper: Update edges untuk action node baru
+  ----------------------------------- */
+  const updateEdgesForActionNode = (actionId, currentNodes, previousNodes) => {
+    const targetNode = currentNodes.find((n) => n.id === "target");
+    const mappingNode = currentNodes.find((n) => n.id === "mapping");
+    const actionNodes = currentNodes.filter((n) => n.type === "action");
+    const newActionNode = currentNodes.find((n) => n.id === actionId);
+
+    // Tentukan source node untuk edge baru
+    let sourceNodeId = "target";
+    let isFirstAction = false;
+
+    if (mappingNode) {
+      // Jika ada mapping, action pertama connect dari mapping
+      const otherActions = actionNodes.filter((n) => n.id !== actionId);
+      if (otherActions.length === 0) {
+        // Ini adalah action pertama
+        sourceNodeId = "mapping";
+        isFirstAction = true;
+      } else {
+        // Ini bukan action pertama, chain dari action sebelumnya
+        // Sort berdasarkan posisi Y dan ambil yang terakhir (di atas action baru)
+        const sorted = otherActions
+          .filter((a) => a.position.y < newActionNode.position.y)
+          .sort((a, b) => b.position.y - a.position.y);
+
+        if (sorted.length > 0) {
+          sourceNodeId = sorted[0].id;
+        } else {
+          // Jika tidak ada action di atas, berarti ini action pertama (di posisi lebih atas)
+          // Connect dari mapping atau target
+          sourceNodeId = mappingNode ? "mapping" : "target";
+          isFirstAction = true;
+        }
+      }
+    } else {
+      // Tidak ada mapping, action pertama connect dari target
+      const otherActions = actionNodes.filter((n) => n.id !== actionId);
+      if (otherActions.length === 0) {
+        // Ini adalah action pertama
+        sourceNodeId = "target";
+        isFirstAction = true;
+      } else {
+        // Ini bukan action pertama, chain dari action sebelumnya
+        const sorted = otherActions
+          .filter((a) => a.position.y < newActionNode.position.y)
+          .sort((a, b) => b.position.y - a.position.y);
+
+        if (sorted.length > 0) {
+          sourceNodeId = sorted[0].id;
+        } else {
+          // Jika tidak ada action di atas, berarti ini action pertama
+          sourceNodeId = "target";
+          isFirstAction = true;
+        }
+      }
+    }
+
+    setEdges((prev) => {
+      // Buat edge ID yang unik
+      const sourceToActionId = `e-${sourceNodeId}-${actionId}`;
+      const actionToPreviewId = `e-${actionId}-preview`;
+
+      // Hapus edge yang akan diganti
+      let filtered = prev.filter(
+        (e) =>
+          // Hapus edge dari source ke preview (jika ini action pertama)
+          !(
+            isFirstAction &&
+            e.source === sourceNodeId &&
+            e.target === "preview"
+          ) &&
+          // Hapus edge dari source ke action lain yang terhubung langsung ke preview
+          // (jika source adalah action node dan action lain itu adalah action terakhir)
+          !(
+            sourceNodeId.startsWith("action-") &&
+            e.source === sourceNodeId &&
+            e.target !== actionId &&
+            e.target.startsWith("action-") &&
+            prev.some((e2) => e2.source === e.target && e2.target === "preview")
+          ) &&
+          // Hapus edge dengan ID yang sama (jika ada duplikasi)
+          e.id !== sourceToActionId &&
+          e.id !== actionToPreviewId
+      );
+
+      // Jika source adalah action node, hapus edge source->preview (karena akan diganti dengan chain)
+      if (sourceNodeId.startsWith("action-")) {
+        filtered = filtered.filter(
+          (e) => !(e.source === sourceNodeId && e.target === "preview")
+        );
+      }
+
+      // Pastikan edge dari source ke action baru belum ada
+      const hasSourceToAction = filtered.some(
+        (e) => e.source === sourceNodeId && e.target === actionId
+      );
+      if (!hasSourceToAction) {
+        filtered.push({
+          id: sourceToActionId,
+          source: sourceNodeId,
+          target: actionId,
+          animated: true,
+        });
+      }
+
+      // Tentukan apakah action baru adalah action terakhir
+      const otherActions = actionNodes.filter((n) => n.id !== actionId);
+      const isLastAction =
+        otherActions.length === 0 ||
+        !otherActions.some((a) => a.position.y > newActionNode.position.y);
+
+      // Jika ini action terakhir, connect ke preview
+      // Jika bukan action terakhir, tidak perlu connect ke preview (akan di-handle oleh action berikutnya)
+      if (isLastAction) {
+        // Pastikan edge dari action baru ke preview belum ada
+        const hasActionToPreview = filtered.some(
+          (e) => e.source === actionId && e.target === "preview"
+        );
+        if (!hasActionToPreview) {
+          filtered.push({
+            id: actionToPreviewId,
+            source: actionId,
+            target: "preview",
+            animated: true,
+          });
+        }
+      }
+
+      return filtered;
+    });
+  };
+
+  /* -----------------------------------
+     Handler: Tambah node Sumber Data di posisi tertentu
+  ----------------------------------- */
+  const handleAddDataSourceNodeAtPosition = (dropPosition) => {
+    // Double check: pastikan node sumber data belum ada
+    if (hasDataSourceNode || nodes.some((n) => n.id === "data")) {
+      return;
+    }
+
+    // Cari posisi node target
+    const targetNode = nodes.find((n) => n.id === "target");
+
+    if (!targetNode) return;
+
+    // Gunakan posisi drop untuk node data, atau hitung otomatis
+    let dataY = dropPosition.y;
+    const targetY = targetNode.position.y;
+
+    // Jika drop terlalu dekat dengan target, hitung posisi otomatis
+    if (dropPosition.y < targetY + 50) {
+      dataY = targetY + 110;
+    }
+
+    const mappingY = dataY + 110;
+
+    // Tambahkan node sumber data
+    const dataNode = {
+      id: "data",
+      type: "card",
+      position: { x: dropPosition.x || 60, y: dataY },
+      data: {
+        title: "Sumber Data",
+        subtitle: "CSV/XLSX atau manual",
+        panel: "data",
+      },
+    };
+
+    // Tambahkan node field mapping sebagai child
+    const mappingNode = {
+      id: "mapping",
+      type: "card",
+      position: { x: dropPosition.x || 60, y: mappingY },
+      data: {
+        title: "Field Mapping",
+        subtitle: "Nama bisnis → label di halaman → dataKey",
+        panel: "mapping",
+      },
+    };
+
+    // Update posisi preview jika perlu
+    const previewNode = nodes.find((n) => n.id === "preview");
+    const actionNodes = nodes.filter((n) => n.type === "action");
+    let previewY = mappingY + 110;
+
+    // Jika ada action nodes, posisikan preview di bawah action terakhir
+    if (actionNodes.length > 0) {
+      const lastActionY = Math.max(...actionNodes.map((n) => n.position.y));
+      previewY = lastActionY + 110;
+    }
+
+    const updatedPreviewNode = previewNode
+      ? {
+          ...previewNode,
+          position: {
+            x: previewNode.position.x,
+            y: previewY,
+          },
+        }
+      : null;
+
+    // Update nodes - pertahankan semua node yang ada, update yang perlu diubah
+    const otherNodes = nodes.filter(
+      (n) => !["target", "preview"].includes(n.id)
+    );
+    const newNodes = [
+      targetNode,
+      dataNode,
+      mappingNode,
+      ...otherNodes,
+      ...(updatedPreviewNode ? [updatedPreviewNode] : []),
+    ].filter(Boolean);
+
+    setNodes(newNodes);
+
+    // Update edges: hapus edge lama target->preview atau target->action, tambahkan yang baru
+    const newEdges = edges.filter(
+      (e) =>
+        !(
+          (e.source === "target" && e.target === "preview") ||
+          (e.source === "target" && e.target.startsWith("action-"))
+        )
+    );
+
+    // Tambahkan edges baru: target -> data -> mapping
+    newEdges.push(
+      { id: "e-target-data", source: "target", target: "data", animated: true },
+      {
+        id: "e-data-mapping",
+        source: "data",
+        target: "mapping",
+        animated: true,
+      }
+    );
+
+    // Connect mapping ke action pertama atau preview
+    if (actionNodes.length > 0) {
+      // Sort action nodes by Y position
+      const sortedActions = [...actionNodes].sort(
+        (a, b) => a.position.y - b.position.y
+      );
+      const firstAction = sortedActions[0];
+      newEdges.push({
+        id: "e-mapping-action",
+        source: "mapping",
+        target: firstAction.id,
+        animated: true,
+      });
+    } else {
+      // Connect langsung ke preview jika tidak ada action
+      newEdges.push({
+        id: "e-mapping-preview",
+        source: "mapping",
+        target: "preview",
+        animated: true,
+      });
+    }
+
+    setEdges(newEdges);
+  };
+
+  /* -----------------------------------
+     Handler: Hapus node Sumber Data (dipanggil dari node click atau context menu)
+  ----------------------------------- */
+  const handleRemoveDataSourceNode = () => {
+    if (!hasDataSourceNode) return;
+
+    // Hapus node data dan mapping
+    const newNodes = nodes.filter((n) => n.id !== "data" && n.id !== "mapping");
+
+    // Reset posisi preview ke default
+    const targetNode = newNodes.find((n) => n.id === "target");
+    if (targetNode) {
+      const previewNodeToUpdate = newNodes.find((n) => n.id === "preview");
+
+      if (previewNodeToUpdate) {
+        previewNodeToUpdate.position = { x: 60, y: 200 };
+      }
+    }
+
+    setNodes(newNodes);
+
+    // Update edges: hapus semua edge yang terkait dengan node data/mapping
+    const newEdges = edges
+      .filter(
+        (e) =>
+          !["data", "mapping"].includes(e.source) &&
+          !["data", "mapping"].includes(e.target)
+      )
+      .map((e) => {
+        // Update edge target->actions jika perlu
+        if (e.source === "target" && e.target === "actions") {
+          return { ...e, id: "e-target-actions" };
+        }
+        return e;
+      });
+
+    // Pastikan edge target->actions ada
+    if (
+      !newEdges.some((e) => e.source === "target" && e.target === "actions")
+    ) {
+      newEdges.push({
+        id: "e-target-actions",
+        source: "target",
+        target: "actions",
+        animated: true,
+      });
+    }
+
+    // Pastikan edge actions->preview ada
+    if (
+      !newEdges.some((e) => e.source === "actions" && e.target === "preview")
+    ) {
+      newEdges.push({
+        id: "e-actions-preview",
+        source: "actions",
+        target: "preview",
+        animated: true,
+      });
+    }
+
+    setEdges(newEdges);
+
+    // Reset data source state
+    setRows([]);
+    setManualRows([{}]);
+    setManualColumns(["field1"]);
+    setFieldMappings([]);
+  };
+
+  /* -----------------------------------
+     Render UI utama
+  ----------------------------------- */
   return (
-    <div className="min-h-screen bg-gradient-to-bl from-[#f7faff] via-[#ecf2ff] to-[#fafafb]">
-      <div className="mx-auto max-w-[1800px] px-4 py-3">
-        <div className="mb-3 text-center">
-          <p className="text-xs font-medium text-[#3b82f6] uppercase tracking-wide">
-            Node-based Editor
-          </p>
-          <h1 className="mt-1 text-xl font-bold text-[#1a1a1a] drop-shadow-sm">
-            Rancang Automation Plan dengan Node
-          </h1>
-          <p className="mt-1 text-xs text-[#586581] max-w-2xl mx-auto">
-            Klik node di canvas untuk membuka detail input di panel kanan.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
-          <div className="lg:col-span-3 bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="border-b border-gray-200 bg-white px-3 py-2">
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-sm font-semibold text-gray-800">
-                  Canvas
-                </div>
-                <div className="flex items-center gap-3 text-sm">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      checked={editorMode === "data"}
-                      onChange={() => setEditorMode("data")}
-                    />
-                    Data-driven
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      checked={editorMode === "actionOnly"}
-                      onChange={() => setEditorMode("actionOnly")}
-                    />
-                    Action-only (bulk)
-                  </label>
-                </div>
-              </div>
-              <p className="mt-1 text-xs text-gray-500">
-                Action-only: langsung dari Target ke Alur Aksi, bisa loop sampai
-                trigger tertentu (contoh: data habis saat bulk delete).
-              </p>
-            </div>
-
-            <div className="h-[calc(100vh-260px)] min-h-[520px]">
-              <ReactFlow
-                nodes={nodes}
-                edges={edges}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onNodeClick={onNodeClick}
-                nodeTypes={nodeTypes}
-                fitView
-              >
-                <MiniMap />
-                <Controls />
-                <Background />
-              </ReactFlow>
-            </div>
-          </div>
-
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-md p-3 h-[calc(100vh-210px)] min-h-[520px] overflow-y-auto">
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-base font-semibold text-gray-800">
-                  Detail Node
-                </h2>
-                <span className="text-xs px-2 py-1 rounded bg-blue-50 text-blue-700 border border-blue-100">
-                  {activePanel}
-                </span>
-              </div>
-
-              {activePanel === "target" && (
-                <TargetConfiguration
-                  targetUrl={targetUrl}
-                  setTargetUrl={setTargetUrl}
-                  requiresLogin={requiresLogin}
-                  setRequiresLogin={setRequiresLogin}
-                  loginUrl={loginUrl}
-                  setLoginUrl={setLoginUrl}
-                  loginUsername={loginUsername}
-                  setLoginUsername={setLoginUsername}
-                  loginPassword={loginPassword}
-                  setLoginPassword={setLoginPassword}
-                  navigationSteps={navigationSteps}
-                  setNavigationSteps={setNavigationSteps}
-                  pageReadyType={pageReadyType}
-                  setPageReadyType={setPageReadyType}
-                  pageReadyValue={pageReadyValue}
-                  setPageReadyValue={setPageReadyValue}
-                />
-              )}
-
-              {activePanel === "data" && (
-                <>
-                  {editorMode === "data" ? (
-                    <DataSourceSection
-                      dataSourceType={dataSourceType}
-                      setDataSourceType={setDataSourceType}
-                      rows={rows}
-                      setRows={setRows}
-                      manualRows={manualRows}
-                      setManualRows={setManualRows}
-                      manualColumns={manualColumns}
-                      setManualColumns={setManualColumns}
-                      dataMode={dataMode}
-                      setDataMode={setDataMode}
-                      xlsxSheets={xlsxSheets}
-                      setXlsxSheets={setXlsxSheets}
-                      selectedSheet={selectedSheet}
-                      setSelectedSheet={setSelectedSheet}
-                      selectedRowIndex={selectedRowIndex}
-                      setSelectedRowIndex={setSelectedRowIndex}
-                      onFileSelect={handleFileSelect}
-                      onSheetChange={handleSheetChange}
-                      effectiveRows={effectiveRows}
-                      columns={columns}
-                    />
-                  ) : (
-                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                      <p className="text-sm text-gray-700">
-                        Mode <span className="font-semibold">Action-only</span>{" "}
-                        tidak membutuhkan Sumber Data.
-                      </p>
-                      <p className="mt-1 text-xs text-gray-500">
-                        Jika ingin mengisi field berdasarkan data, ganti ke mode
-                        Data-driven.
-                      </p>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {activePanel === "mapping" && (
-                <>
-                  {editorMode === "data" ? (
-                    <FieldMappingSection
-                      fieldMappings={fieldMappings}
-                      setFieldMappings={setFieldMappings}
-                      columns={columns}
-                    />
-                  ) : (
-                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                      <p className="text-sm text-gray-700">
-                        Mode <span className="font-semibold">Action-only</span>{" "}
-                        tidak membutuhkan Field Mapping.
-                      </p>
-                      <p className="mt-1 text-xs text-gray-500">
-                        Untuk aksi <span className="font-mono">fill</span>, ganti
-                        ke mode Data-driven.
-                      </p>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {activePanel === "actions" && (
-                <ActionFlowSection
-                  actions={actions}
-                  setActions={setActions}
-                  fieldMappings={fieldMappings}
-                  successIndicator={successIndicator}
-                  setSuccessIndicator={setSuccessIndicator}
-                  failureIndicator={failureIndicator}
-                  setFailureIndicator={setFailureIndicator}
-                  execution={execution}
-                  setExecution={setExecution}
-                  allowFill={editorMode === "data"}
-                />
-              )}
-
-              {activePanel === "preview" && (
-                <div className="space-y-3">
-                  <AutomationPlanPreview
-                    plan={generateAutomationPlan()}
-                    effectiveRows={effectiveRows}
-                  />
-                  {executionReport ? (
-                    <ExecutionReport report={executionReport} />
-                  ) : (
-                    <div className="bg-white rounded-lg shadow-md p-3">
-                      <p className="text-sm text-gray-500 text-center">
-                        Belum ada hasil eksekusi.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
-          <button
-            onClick={handleRun}
-            disabled={isExecuting}
-            className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-xl"
+    <div className="flex-1 relative w-full h-full bg-gradient-to-bl from-[#f7faff] via-[#ecf2ff] to-[#fafafb]">
+      {/* ============== SECTION: CANVAS FULL SCREEN ============= */}
+      <div className="absolute inset-0 w-full h-full">
+        {/* Section: ReactFlow Canvas - Full screen */}
+        <div className="absolute inset-0">
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={handleNodesChange}
+            onEdgesChange={onEdgesChange}
+            onNodeClick={onNodeClick}
+            onNodeDragStop={onNodeDragStop}
+            onDrop={onDrop}
+            onDragOver={onDragOver}
+            onInit={setReactFlowInstance}
+            nodeTypes={nodeTypes}
+            fitView
           >
-            {isExecuting ? "Menjalankan..." : "Jalankan Automation Plan"}
-          </button>
+            <Controls />
+            <Background />
+          </ReactFlow>
         </div>
       </div>
+      {/* ============== END SECTION: CANVAS FULL SCREEN ============= */}
+
+      {/* ============== SECTION: DETAIL PANEL - INSIDE CANVAS ============= */}
+      {isDetailOpen && (
+        <div
+          className="
+            absolute top-6 right-6 bottom-6 z-40 w-[380px] bg-white shadow-xl border border-gray-200 rounded-lg transition-all duration-300
+            flex flex-col overflow-hidden
+          "
+          style={{
+            willChange: "transform",
+            maxHeight: "calc(100vh - 80px)",
+          }}
+        >
+          <div className="flex items-center justify-between px-3 py-2 border-b flex-shrink-0">
+            <h2 className="text-base font-semibold text-gray-800 truncate">
+              Detail {activePanel}
+            </h2>
+            <button
+              type="button"
+              onClick={() => setIsDetailOpen(false)}
+              className="cursor-pointer text-sm text-gray-500 hover:text-gray-700 flex-shrink-0 ml-2"
+            >
+              Tutup
+            </button>
+          </div>
+          <div className="p-3 flex-1 overflow-y-auto overflow-x-hidden space-y-3 min-w-0">
+            {activePanel === "target" && (
+              <TargetConfiguration
+                targetUrl={targetUrl}
+                setTargetUrl={setTargetUrl}
+                requiresLogin={requiresLogin}
+                setRequiresLogin={setRequiresLogin}
+                loginUrl={loginUrl}
+                setLoginUrl={setLoginUrl}
+                loginUsername={loginUsername}
+                setLoginUsername={setLoginUsername}
+                loginPassword={loginPassword}
+                setLoginPassword={setLoginPassword}
+                navigationSteps={navigationSteps}
+                setNavigationSteps={setNavigationSteps}
+                pageReadyType={pageReadyType}
+                setPageReadyType={setPageReadyType}
+                pageReadyValue={pageReadyValue}
+                setPageReadyValue={setPageReadyValue}
+              />
+            )}
+            {activePanel === "data" && (
+              <DataSourceSection
+                dataSourceType={dataSourceType}
+                setDataSourceType={setDataSourceType}
+                rows={rows}
+                setRows={setRows}
+                manualRows={manualRows}
+                setManualRows={setManualRows}
+                manualColumns={manualColumns}
+                setManualColumns={setManualColumns}
+                dataMode={dataMode}
+                setDataMode={setDataMode}
+                xlsxSheets={xlsxSheets}
+                setXlsxSheets={setXlsxSheets}
+                selectedSheet={selectedSheet}
+                setSelectedSheet={setSelectedSheet}
+                selectedRowIndex={selectedRowIndex}
+                setSelectedRowIndex={setSelectedRowIndex}
+                onFileSelect={handleFileSelect}
+                onSheetChange={handleSheetChange}
+                effectiveRows={effectiveRows}
+                columns={columns}
+              />
+            )}
+            {activePanel === "mapping" && (
+              <FieldMappingSection
+                fieldMappings={fieldMappings}
+                setFieldMappings={setFieldMappings}
+                columns={columns}
+              />
+            )}
+            {activePanel === "action" && selectedNode && (
+              <ActionNodeEditor
+                node={selectedNode}
+                setNode={(updatedNode) => {
+                  setNodes((prev) =>
+                    prev.map((n) => (n.id === updatedNode.id ? updatedNode : n))
+                  );
+                  setSelectedNode(updatedNode);
+                }}
+                fieldMappings={fieldMappings}
+                onDelete={() => {
+                  const nodeId = selectedNode.id;
+
+                  // Hapus node dan reconnect edges
+                  setNodes((prev) => {
+                    const deletedNode = prev.find((n) => n.id === nodeId);
+                    if (!deletedNode) return prev;
+
+                    const newNodes = prev.filter((n) => n.id !== nodeId);
+                    const remainingActionNodes = newNodes.filter(
+                      (n) => n.type === "action"
+                    );
+
+                    // Update edges untuk reconnect
+                    setEdges((prevEdges) => {
+                      // Cari edge yang masuk ke node yang dihapus dan edge yang keluar
+                      const incomingEdge = prevEdges.find(
+                        (e) => e.target === nodeId
+                      );
+                      const outgoingEdge = prevEdges.find(
+                        (e) => e.source === nodeId
+                      );
+
+                      // Hapus edge yang terkait dengan node yang dihapus
+                      let newEdges = prevEdges.filter(
+                        (e) => e.source !== nodeId && e.target !== nodeId
+                      );
+
+                      // Reconnect logic
+                      if (incomingEdge && outgoingEdge) {
+                        // Node tengah: connect incoming source ke outgoing target
+                        const newEdgeId = `e-${incomingEdge.source}-${outgoingEdge.target}`;
+                        if (!newEdges.some((e) => e.id === newEdgeId)) {
+                          newEdges.push({
+                            id: newEdgeId,
+                            source: incomingEdge.source,
+                            target: outgoingEdge.target,
+                            animated: true,
+                          });
+                        }
+                      } else if (incomingEdge && !outgoingEdge) {
+                        // Node terakhir: connect incoming ke preview
+                        const newEdgeId = `e-${incomingEdge.source}-preview`;
+                        if (!newEdges.some((e) => e.id === newEdgeId)) {
+                          newEdges.push({
+                            id: newEdgeId,
+                            source: incomingEdge.source,
+                            target: "preview",
+                            animated: true,
+                          });
+                        }
+                      } else if (!incomingEdge && outgoingEdge) {
+                        // Node pertama: connect dari mapping/target ke outgoing target
+                        const mappingNode = newNodes.find(
+                          (n) => n.id === "mapping"
+                        );
+                        const sourceId = mappingNode ? "mapping" : "target";
+                        const newEdgeId = `e-${sourceId}-${outgoingEdge.target}`;
+                        if (!newEdges.some((e) => e.id === newEdgeId)) {
+                          newEdges.push({
+                            id: newEdgeId,
+                            source: sourceId,
+                            target: outgoingEdge.target,
+                            animated: true,
+                          });
+                        }
+                      }
+
+                      // Pastikan action node terakhir selalu connect ke preview
+                      if (remainingActionNodes.length > 0) {
+                        const sortedActions = [...remainingActionNodes].sort(
+                          (a, b) => a.position.y - b.position.y
+                        );
+                        const lastAction =
+                          sortedActions[sortedActions.length - 1];
+                        const lastActionToPreviewId = `e-${lastAction.id}-preview`;
+
+                        if (
+                          !newEdges.some((e) => e.id === lastActionToPreviewId)
+                        ) {
+                          // Hapus edge lain dari lastAction jika ada
+                          newEdges = newEdges.filter(
+                            (e) =>
+                              !(
+                                e.source === lastAction.id &&
+                                e.target !== "preview"
+                              )
+                          );
+                          newEdges.push({
+                            id: lastActionToPreviewId,
+                            source: lastAction.id,
+                            target: "preview",
+                            animated: true,
+                          });
+                        }
+                      } else {
+                        // Tidak ada action node lagi, connect target/mapping langsung ke preview
+                        const mappingNode = newNodes.find(
+                          (n) => n.id === "mapping"
+                        );
+                        const sourceId = mappingNode ? "mapping" : "target";
+                        const directToPreviewId = `e-${sourceId}-preview`;
+
+                        if (!newEdges.some((e) => e.id === directToPreviewId)) {
+                          newEdges.push({
+                            id: directToPreviewId,
+                            source: sourceId,
+                            target: "preview",
+                            animated: true,
+                          });
+                        }
+                      }
+
+                      return newEdges;
+                    });
+
+                    return newNodes;
+                  });
+
+                  setIsDetailOpen(false);
+                  setSelectedNode(null);
+                }}
+              />
+            )}
+            {activePanel === "preview" && (
+              <div className="space-y-3">
+                <AutomationPlanPreview
+                  plan={generateAutomationPlan()}
+                  effectiveRows={effectiveRows}
+                />
+                <ExecutionReport report={executionReport} />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      {/* ============== END SECTION: DETAIL PANEL - INSIDE CANVAS ============= */}
+
+      {/* ============== SECTION: BUTTON JALANKAN (BOTTOM FIXED) ============= */}
+      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+        <button
+          onClick={handleRun}
+          disabled={isExecuting}
+          className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-xl"
+        >
+          {isExecuting ? "Menjalankan..." : "Jalankan Automation Plan"}
+        </button>
+      </div>
+      {/* ============== END SECTION: BUTTON JALANKAN ============= */}
     </div>
   );
 }
-

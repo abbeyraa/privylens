@@ -37,6 +37,7 @@ export default function ActionFlowSection({
     setActions(actions.filter((_, i) => i !== idx));
   };
 
+  // Helper functions
   const getActionTargetOptions = (actionType) => {
     if (actionType === "fill") {
       return fieldMappings.map((fm) => ({
@@ -45,6 +46,17 @@ export default function ActionFlowSection({
       }));
     }
     return [];
+  };
+
+  const getTargetPlaceholder = (actionType) => {
+    switch (actionType) {
+      case "click":
+        return "Label atau selector tombol/elemen (contoh: Tambah Data)";
+      case "handleDialog":
+        return "Selector dialog";
+      default:
+        return "";
+    }
   };
 
   const effectiveExecution = showExecutionOptions
@@ -339,11 +351,7 @@ export default function ActionFlowSection({
                         onChange={(e) =>
                           updateAction(idx, "target", e.target.value)
                         }
-                        placeholder={
-                          action.type === "click"
-                            ? "Label atau selector tombol/elemen (contoh: Tambah Data)"
-                            : "Selector dialog"
-                        }
+                        placeholder={getTargetPlaceholder(action.type)}
                         className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                     )}

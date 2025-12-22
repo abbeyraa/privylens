@@ -1,29 +1,33 @@
 "use client";
 
+// Helper functions untuk field mapping operations
+const createNewFieldMapping = (columns) => ({
+  name: "",
+  type: "text",
+  dataKey: columns[0] || "",
+  required: false,
+  labels: [""],
+  fallbackLabels: [],
+  conditional: null,
+});
+
+const updateFieldMappingAtIndex = (fieldMappings, idx, updates) => {
+  const next = [...fieldMappings];
+  next[idx] = { ...next[idx], ...updates };
+  return next;
+};
+
 export default function FieldMappingSection({
   fieldMappings,
   setFieldMappings,
   columns,
 }) {
   const addFieldMapping = () => {
-    setFieldMappings([
-      ...fieldMappings,
-      {
-        name: "",
-        type: "text",
-        dataKey: columns[0] || "",
-        required: false,
-        labels: [""],
-        fallbackLabels: [],
-        conditional: null,
-      },
-    ]);
+    setFieldMappings([...fieldMappings, createNewFieldMapping(columns)]);
   };
 
   const updateFieldMapping = (idx, field, value) => {
-    const next = [...fieldMappings];
-    next[idx] = { ...next[idx], [field]: value };
-    setFieldMappings(next);
+    setFieldMappings(updateFieldMappingAtIndex(fieldMappings, idx, { [field]: value }));
   };
 
   const removeFieldMapping = (idx) => {
@@ -31,8 +35,9 @@ export default function FieldMappingSection({
   };
 
   const addLabel = (idx) => {
-    const next = [...fieldMappings];
-    next[idx].labels = [...(next[idx].labels || []), ""];
+    const next = updateFieldMappingAtIndex(fieldMappings, idx, {
+      labels: [...(fieldMappings[idx].labels || []), ""],
+    });
     setFieldMappings(next);
   };
 
@@ -71,9 +76,7 @@ export default function FieldMappingSection({
   };
 
   const setConditional = (idx, conditional) => {
-    const next = [...fieldMappings];
-    next[idx].conditional = conditional;
-    setFieldMappings(next);
+    setFieldMappings(updateFieldMappingAtIndex(fieldMappings, idx, { conditional }));
   };
 
   return (
@@ -95,7 +98,7 @@ export default function FieldMappingSection({
         Playwright akan mencari elemen berdasarkan label yang didefinisikan.
       </p>
 
-      <div className="space-y-2 flex-1 overflow-y-auto max-h-[calc(100vh-200px)]">
+      <div className="space-y-2 flex-1 overflow-y-auto overflow-x-hidden max-h-[calc(100vh-200px)] min-w-0">
         {fieldMappings.map((fm, idx) => (
           <div
             key={idx}
@@ -111,7 +114,9 @@ export default function FieldMappingSection({
                   <input
                     type="text"
                     value={fm.name}
-                    onChange={(e) => updateFieldMapping(idx, "name", e.target.value)}
+                    onChange={(e) =>
+                      updateFieldMapping(idx, "name", e.target.value)
+                    }
                     placeholder="contoh: Nama Lengkap, Email, Status"
                     className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
@@ -125,7 +130,9 @@ export default function FieldMappingSection({
                     </label>
                     <select
                       value={fm.type}
-                      onChange={(e) => updateFieldMapping(idx, "type", e.target.value)}
+                      onChange={(e) =>
+                        updateFieldMapping(idx, "type", e.target.value)
+                      }
                       className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="text">Text</option>
@@ -141,7 +148,9 @@ export default function FieldMappingSection({
                     </label>
                     <select
                       value={fm.dataKey}
-                      onChange={(e) => updateFieldMapping(idx, "dataKey", e.target.value)}
+                      onChange={(e) =>
+                        updateFieldMapping(idx, "dataKey", e.target.value)
+                      }
                       className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       {columns.map((col) => (
@@ -258,8 +267,12 @@ export default function FieldMappingSection({
                     className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">Tidak Ada Kondisi</option>
-                    <option value="dataExists">Hanya Isi Jika Data Tersedia</option>
-                    <option value="elementExists">Hanya Isi Jika Elemen Ada</option>
+                    <option value="dataExists">
+                      Hanya Isi Jika Data Tersedia
+                    </option>
+                    <option value="elementExists">
+                      Hanya Isi Jika Elemen Ada
+                    </option>
                   </select>
                   {fm.conditional && (
                     <input
@@ -294,7 +307,8 @@ export default function FieldMappingSection({
 
         {fieldMappings.length === 0 && (
           <p className="text-center text-gray-500 py-8">
-            Belum ada field mapping. Klik tombol &quot;+ Field&quot; untuk menambahkan.
+            Belum ada field mapping. Klik tombol &quot;+ Field&quot; untuk
+            menambahkan.
           </p>
         )}
       </div>
