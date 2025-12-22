@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import HumanTypingInput from "../HumanTypingInput";
 
 export default function DataSourceSection({
   dataSourceType,
@@ -225,7 +226,7 @@ export default function DataSourceSection({
               <div className="space-y-1 max-h-32 overflow-y-auto">
                 {manualColumns.map((col, idx) => (
                   <div key={idx} className="flex gap-1">
-                    <input
+                    <HumanTypingInput
                       type="text"
                       value={col}
                       onChange={(e) => renameManualColumn(idx, e.target.value)}
@@ -282,7 +283,7 @@ export default function DataSourceSection({
                             key={col}
                             className="border border-gray-300 px-1 py-0.5"
                           >
-                            <input
+                            <HumanTypingInput
                               type="text"
                               value={row[col] || ""}
                               onChange={(e) =>
@@ -380,7 +381,10 @@ export default function DataSourceSection({
                 <thead className="bg-gray-50">
                   <tr>
                     {columns.map((col) => (
-                      <th key={col} className="px-2 py-1 text-left border-b truncate">
+                      <th
+                        key={col}
+                        className="px-2 py-1 text-left border-b truncate"
+                      >
                         {col}
                       </th>
                     ))}
@@ -390,7 +394,11 @@ export default function DataSourceSection({
                   {effectiveRows.slice(0, 3).map((row, idx) => (
                     <tr key={idx} className="border-b">
                       {columns.map((col) => (
-                        <td key={col} className="px-2 py-1 truncate" title={String(row[col] || "")}>
+                        <td
+                          key={col}
+                          className="px-2 py-1 truncate"
+                          title={String(row[col] || "")}
+                        >
                           {String(row[col] || "").substring(0, 30)}
                         </td>
                       ))}

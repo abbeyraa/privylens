@@ -18,7 +18,8 @@ const STATUS_ICONS = {
 };
 
 // Helper functions
-const getStatusColor = (status) => STATUS_COLORS[status] || STATUS_COLORS.default;
+const getStatusColor = (status) =>
+  STATUS_COLORS[status] || STATUS_COLORS.default;
 const getStatusIcon = (status) => STATUS_ICONS[status] || STATUS_ICONS.default;
 
 export default function ExecutionReport({ report }) {
@@ -62,7 +63,10 @@ export default function ExecutionReport({ report }) {
         <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-red-800 font-medium text-sm">Error:</p>
           {/* Full message, not truncated */}
-          <pre className="text-red-600 text-xs mt-1 whitespace-pre-wrap break-all" style={{ wordBreak: 'break-word' }}>
+          <pre
+            className="text-red-600 text-xs mt-1 whitespace-pre-wrap break-all"
+            style={{ wordBreak: "break-word" }}
+          >
             {report.message}
           </pre>
         </div>

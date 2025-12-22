@@ -61,7 +61,8 @@ export default function TargetConfiguration({
             className="w-full px-2 py-1 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
           <p className="mt-1 text-xs text-gray-500">
-            URL halaman target dimana form akan diisi. Contoh: halaman transactions, form create, dll.
+            URL halaman target dimana form akan diisi. Contoh: halaman
+            transactions, form create, dll.
           </p>
         </div>
 
@@ -139,7 +140,8 @@ export default function TargetConfiguration({
               </button>
             </div>
             <p className="text-xs text-gray-500">
-              Setelah login, langkah-langkah untuk sampai ke halaman target (misal: klik menu, navigasi, dll)
+              Setelah login, langkah-langkah untuk sampai ke halaman target
+              (misal: klik menu, navigasi, dll)
             </p>
             <div className="space-y-2 max-h-40 overflow-y-auto">
               {navigationSteps.map((step, idx) => (
@@ -189,7 +191,11 @@ export default function TargetConfiguration({
                       type="number"
                       value={step.duration || 1}
                       onChange={(e) =>
-                        updateNavigationStep(idx, "duration", Number(e.target.value))
+                        updateNavigationStep(
+                          idx,
+                          "duration",
+                          Number(e.target.value)
+                        )
                       }
                       placeholder="Durasi (detik)"
                       className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
@@ -204,7 +210,8 @@ export default function TargetConfiguration({
         {/* Page Ready Indicator */}
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">
-            Indikator Halaman Target Siap <span className="text-red-500">*</span>
+            Indikator Halaman Target Siap{" "}
+            <span className="text-red-500">*</span>
           </label>
           <div className="flex gap-2 mb-1">
             <select
@@ -231,7 +238,8 @@ export default function TargetConfiguration({
             />
           </div>
           <p className="text-xs text-gray-500">
-            Indikator yang menunjukkan bahwa halaman target sudah siap. Setelah ini, Alur Aksi akan dieksekusi.
+            Indikator yang menunjukkan bahwa halaman target sudah siap. Setelah
+            ini, Alur Aksi akan dieksekusi.
           </p>
         </div>
       </div>

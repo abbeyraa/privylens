@@ -94,9 +94,11 @@ export default function AutomationPlanPreview({ plan, effectiveRows }) {
                 {plan.fieldMappings.map((fm, idx) => (
                   <div key={idx} className="bg-gray-50 p-2 rounded">
                     <p>
-                      <span className="font-medium">{fm.name}</span> ({fm.type}) →{" "}
-                      {fm.dataKey}
-                      {fm.required && <span className="text-red-500 ml-1">*</span>}
+                      <span className="font-medium">{fm.name}</span> ({fm.type})
+                      → {fm.dataKey}
+                      {fm.required && (
+                        <span className="text-red-500 ml-1">*</span>
+                      )}
                     </p>
                     <p className="text-xs text-gray-500 ml-4">
                       Labels: {fm.labels?.join(", ") || "Tidak ada"}
@@ -119,8 +121,8 @@ export default function AutomationPlanPreview({ plan, effectiveRows }) {
                 {plan.actions.map((action, idx) => (
                   <div key={idx} className="bg-gray-50 p-2 rounded">
                     <p>
-                      <span className="font-medium">{idx + 1}.</span> {action.type} →{" "}
-                      {action.target}
+                      <span className="font-medium">{idx + 1}.</span>{" "}
+                      {action.type} → {action.target}
                       {action.value && ` = ${action.value}`}
                     </p>
                     {action.waitFor && (
@@ -132,31 +134,37 @@ export default function AutomationPlanPreview({ plan, effectiveRows }) {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-500">Belum ada aksi yang didefinisikan</p>
+              <p className="text-sm text-gray-500">
+                Belum ada aksi yang didefinisikan
+              </p>
             )}
           </SectionPreview>
 
           {/* Execution (Loop) */}
-          {plan.execution?.mode === "loop" && plan.execution?.loop?.indicator && (
-            <SectionPreview title="Eksekusi (Loop)" borderColor="border-slate-500">
-              <InfoRow
-                label="Max iterasi"
-                value={plan.execution.loop.maxIterations ?? 50}
-              />
-              <InfoRow
-                label="Delay"
-                value={`${plan.execution.loop.delaySeconds ?? 0}s`}
-              />
-              <InfoRow
-                label="Stop saat"
-                value={getStopWhenLabel(plan.execution.loop.stopWhen)}
-              />
-              <InfoRow
-                label="Indikator"
-                value={`${plan.execution.loop.indicator.type} = ${plan.execution.loop.indicator.value}`}
-              />
-            </SectionPreview>
-          )}
+          {plan.execution?.mode === "loop" &&
+            plan.execution?.loop?.indicator && (
+              <SectionPreview
+                title="Eksekusi (Loop)"
+                borderColor="border-slate-500"
+              >
+                <InfoRow
+                  label="Max iterasi"
+                  value={plan.execution.loop.maxIterations ?? 50}
+                />
+                <InfoRow
+                  label="Delay"
+                  value={`${plan.execution.loop.delaySeconds ?? 0}s`}
+                />
+                <InfoRow
+                  label="Stop saat"
+                  value={getStopWhenLabel(plan.execution.loop.stopWhen)}
+                />
+                <InfoRow
+                  label="Indikator"
+                  value={`${plan.execution.loop.indicator.type} = ${plan.execution.loop.indicator.value}`}
+                />
+              </SectionPreview>
+            )}
 
           {/* Indicators */}
           <SectionPreview title="Indikator Hasil" borderColor="border-red-500">
@@ -174,16 +182,16 @@ export default function AutomationPlanPreview({ plan, effectiveRows }) {
             )}
           </SectionPreview>
 
-        {/* JSON Preview */}
-        <details className="mt-3">
-          <summary className="cursor-pointer text-xs font-medium text-gray-700 hover:text-gray-900">
-            Tampilkan JSON Automation Plan
-          </summary>
-          <pre className="mt-2 p-3 bg-gray-900 text-green-400 rounded-lg overflow-x-hidden overflow-y-auto text-xs break-words whitespace-pre-wrap">
-            {JSON.stringify(plan, null, 2)}
-          </pre>
-        </details>
-      </div>
+          {/* JSON Preview */}
+          <details className="mt-3">
+            <summary className="cursor-pointer text-xs font-medium text-gray-700 hover:text-gray-900">
+              Tampilkan JSON Automation Plan
+            </summary>
+            <pre className="mt-2 p-3 bg-gray-900 text-green-400 rounded-lg overflow-x-hidden overflow-y-auto text-xs break-words whitespace-pre-wrap">
+              {JSON.stringify(plan, null, 2)}
+            </pre>
+          </details>
+        </div>
       </details>
     </div>
   );

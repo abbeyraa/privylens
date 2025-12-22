@@ -10,9 +10,7 @@ export default function AddDataSourceNode({ data, selected }) {
         "min-w-[200px] max-w-[250px]",
         "cursor-grab active:cursor-grabbing select-none",
         "hover:border-blue-400 hover:shadow-md transition-all",
-        selected
-          ? "border-blue-500 ring-2 ring-blue-200"
-          : "border-blue-300",
+        selected ? "border-blue-500 ring-2 ring-blue-200" : "border-blue-300",
       ].join(" ")}
     >
       <div className="flex items-center gap-2">

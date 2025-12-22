@@ -1,5 +1,7 @@
 "use client";
 
+import HumanTypingInput from "../HumanTypingInput";
+
 // Helper functions untuk field mapping operations
 const createNewFieldMapping = (columns) => ({
   name: "",
@@ -111,7 +113,7 @@ export default function FieldMappingSection({
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Nama Field <span className="text-red-500">*</span>
                   </label>
-                  <input
+                  <HumanTypingInput
                     type="text"
                     value={fm.name}
                     onChange={(e) =>
@@ -185,7 +187,7 @@ export default function FieldMappingSection({
                   <div className="space-y-2">
                     {fm.labels?.map((label, labelIdx) => (
                       <div key={labelIdx} className="flex gap-2">
-                        <input
+                        <HumanTypingInput
                           type="text"
                           value={label}
                           onChange={(e) =>
@@ -221,7 +223,7 @@ export default function FieldMappingSection({
                   <div className="space-y-2">
                     {fm.fallbackLabels?.map((label, labelIdx) => (
                       <div key={labelIdx} className="flex gap-2">
-                        <input
+                        <HumanTypingInput
                           type="text"
                           value={label}
                           onChange={(e) =>
@@ -275,7 +277,7 @@ export default function FieldMappingSection({
                     </option>
                   </select>
                   {fm.conditional && (
-                    <input
+                    <HumanTypingInput
                       type="text"
                       value={fm.conditional.value || ""}
                       onChange={(e) =>

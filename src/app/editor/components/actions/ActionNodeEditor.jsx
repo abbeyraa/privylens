@@ -22,6 +22,55 @@ const getTargetPlaceholder = (actionType) => {
   }
 };
 
+// Helper function untuk mendapatkan field yang harus di-reset berdasarkan action type
+const getFieldsToReset = (newType, oldType) => {
+  const fieldsToReset = {};
+
+  // Jika type berubah, reset field yang tidak relevan
+  if (newType !== oldType) {
+    switch (newType) {
+      case "wait":
+        // Wait tidak butuh target dan waitFor
+        fieldsToReset.actionTarget = "";
+        fieldsToReset.actionWaitFor = null;
+        // Value untuk wait adalah durasi (default 1)
+        if (oldType !== "wait") {
+          fieldsToReset.actionValue = 1;
+        }
+        break;
+      case "fill":
+        // Fill butuh target (field mapping), tapi tidak perlu reset value
+        // Hanya reset target jika sebelumnya bukan fill
+        if (oldType !== "fill") {
+          fieldsToReset.actionTarget = "";
+        }
+        // Reset waitFor jika ada
+        fieldsToReset.actionWaitFor = null;
+        break;
+      case "click":
+      case "handleDialog":
+      case "navigate":
+        // Action ini butuh target, tapi tidak butuh value khusus
+        // Reset value jika sebelumnya adalah fill atau wait
+        if (oldType === "fill" || oldType === "wait") {
+          fieldsToReset.actionValue = null;
+        }
+        // Reset target jika sebelumnya adalah wait
+        if (oldType === "wait") {
+          fieldsToReset.actionTarget = "";
+        }
+        break;
+      default:
+        // Untuk type lain, reset semua field yang tidak relevan
+        fieldsToReset.actionTarget = "";
+        fieldsToReset.actionValue = null;
+        fieldsToReset.actionWaitFor = null;
+    }
+  }
+
+  return fieldsToReset;
+};
+
 export default function ActionNodeEditor({
   node,
   setNode,
@@ -31,12 +80,32 @@ export default function ActionNodeEditor({
   if (!node) return null;
 
   const updateNodeData = (field, value) => {
-    setNode({
-      ...node,
+    // Gunakan callback untuk memastikan kita selalu menggunakan node terbaru
+    setNode((currentNode) => ({
+      ...currentNode,
       data: {
-        ...node.data,
+        ...currentNode.data,
         [field]: value,
       },
+    }));
+  };
+
+  // Handler khusus untuk perubahan action type
+  const handleActionTypeChange = (newType) => {
+    // Gunakan callback untuk memastikan kita selalu menggunakan node terbaru
+    setNode((currentNode) => {
+      const oldType = currentNode.data?.actionType || "click";
+      const fieldsToReset = getFieldsToReset(newType, oldType);
+
+      // Update type dan reset field yang tidak relevan
+      return {
+        ...currentNode,
+        data: {
+          ...currentNode.data,
+          actionType: newType,
+          ...fieldsToReset,
+        },
+      };
     });
   };
 
@@ -65,7 +134,7 @@ export default function ActionNodeEditor({
           </label>
           <select
             value={actionType}
-            onChange={(e) => updateNodeData("actionType", e.target.value)}
+            onChange={(e) => handleActionTypeChange(e.target.value)}
             className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             {fieldMappings.length > 0 && (
@@ -91,11 +160,13 @@ export default function ActionNodeEditor({
                 className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">Pilih Field</option>
-                {getActionTargetOptions(actionType, fieldMappings).map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
+                {getActionTargetOptions(actionType, fieldMappings).map(
+                  (opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  )
+                )}
               </select>
             ) : actionType === "navigate" ? (
               <input
@@ -162,13 +233,20 @@ export default function ActionNodeEditor({
             <div className="flex gap-2">
               <select
                 value={actionWaitFor?.type || "selector"}
-                onChange={(e) =>
-                  updateNodeData("actionWaitFor", {
-                    ...actionWaitFor,
-                    type: e.target.value,
-                    value: actionWaitFor?.value || "",
-                  })
-                }
+                onChange={(e) => {
+                  // Gunakan callback untuk memastikan kita menggunakan nilai terbaru
+                  setNode((currentNode) => ({
+                    ...currentNode,
+                    data: {
+                      ...currentNode.data,
+                      actionWaitFor: {
+                        ...(currentNode.data?.actionWaitFor || {}),
+                        type: e.target.value,
+                        value: currentNode.data?.actionWaitFor?.value || "",
+                      },
+                    },
+                  }));
+                }}
                 className="px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="selector">CSS Selector</option>
@@ -178,13 +256,20 @@ export default function ActionNodeEditor({
               <input
                 type="text"
                 value={actionWaitFor?.value || ""}
-                onChange={(e) =>
-                  updateNodeData("actionWaitFor", {
-                    ...actionWaitFor,
-                    type: actionWaitFor?.type || "selector",
-                    value: e.target.value,
-                  })
-                }
+                onChange={(e) => {
+                  // Gunakan callback untuk memastikan kita menggunakan nilai terbaru
+                  setNode((currentNode) => ({
+                    ...currentNode,
+                    data: {
+                      ...currentNode.data,
+                      actionWaitFor: {
+                        ...(currentNode.data?.actionWaitFor || {}),
+                        type: currentNode.data?.actionWaitFor?.type || "selector",
+                        value: e.target.value,
+                      },
+                    },
+                  }));
+                }}
                 placeholder="Indikator yang ditunggu setelah aksi"
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />

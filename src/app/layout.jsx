@@ -22,7 +22,9 @@ export default function RootLayout({ children }) {
       <body className={`${poppins.className} antialiased flex flex-col h-full`}>
         <EditorProviderWrapper>
           <Header />
-          <main className="flex-1 flex flex-col overflow-hidden">{children}</main>
+          <main className="flex-1 flex flex-col overflow-hidden">
+            {children}
+          </main>
         </EditorProviderWrapper>
       </body>
     </html>

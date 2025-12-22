@@ -1,5 +1,7 @@
 "use client";
 
+import HumanTypingInput from "../HumanTypingInput";
+
 export default function ActionFlowSection({
   actions,
   setActions,
@@ -27,9 +29,71 @@ export default function ActionFlowSection({
     ]);
   };
 
+  // Helper function untuk mendapatkan field yang harus di-reset berdasarkan action type
+  const getFieldsToReset = (newType, oldType) => {
+    const fieldsToReset = {};
+
+    // Jika type berubah, reset field yang tidak relevan
+    if (newType !== oldType) {
+      switch (newType) {
+        case "wait":
+          // Wait tidak butuh target dan waitFor
+          fieldsToReset.target = "";
+          fieldsToReset.waitFor = null;
+          // Value untuk wait adalah durasi (default 1)
+          if (oldType !== "wait") {
+            fieldsToReset.value = 1;
+          }
+          break;
+        case "fill":
+          // Fill butuh target (field mapping), tapi tidak perlu reset value
+          // Hanya reset target jika sebelumnya bukan fill
+          if (oldType !== "fill") {
+            fieldsToReset.target = "";
+          }
+          // Reset waitFor jika ada
+          fieldsToReset.waitFor = null;
+          break;
+        case "click":
+        case "handleDialog":
+        case "navigate":
+          // Action ini butuh target, tapi tidak butuh value khusus
+          // Reset value jika sebelumnya adalah fill atau wait
+          if (oldType === "fill" || oldType === "wait") {
+            fieldsToReset.value = null;
+          }
+          // Reset target jika sebelumnya adalah wait
+          if (oldType === "wait") {
+            fieldsToReset.target = "";
+          }
+          break;
+        default:
+          // Untuk type lain, reset semua field yang tidak relevan
+          fieldsToReset.target = "";
+          fieldsToReset.value = null;
+          fieldsToReset.waitFor = null;
+      }
+    }
+
+    return fieldsToReset;
+  };
+
   const updateAction = (idx, field, value) => {
     const next = [...actions];
-    next[idx] = { ...next[idx], [field]: value };
+    
+    // Jika field yang diubah adalah "type", reset field yang tidak relevan
+    if (field === "type") {
+      const oldType = next[idx].type || "click";
+      const fieldsToReset = getFieldsToReset(value, oldType);
+      next[idx] = { 
+        ...next[idx], 
+        [field]: value,
+        ...fieldsToReset,
+      };
+    } else {
+      next[idx] = { ...next[idx], [field]: value };
+    }
+    
     setActions(next);
   };
 
@@ -214,27 +278,27 @@ export default function ActionFlowSection({
                     <option value="text">Teks</option>
                     <option value="url">URL Pattern</option>
                   </select>
-                  <input
-                    type="text"
-                    value={effectiveExecution.loop?.indicator?.value || ""}
-                    onChange={(e) =>
-                      setExecution?.({
-                        ...effectiveExecution,
-                        loop: {
-                          ...effectiveExecution.loop,
-                          indicator: {
-                            ...(effectiveExecution.loop?.indicator || {
-                              type: "selector",
-                              value: "",
-                            }),
-                            value: e.target.value,
-                          },
-                        },
-                      })
-                    }
-                    placeholder="Contoh: .btn-delete atau teks 'Tidak ada data'"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
+                      <HumanTypingInput
+                        type="text"
+                        value={effectiveExecution.loop?.indicator?.value || ""}
+                        onChange={(e) =>
+                          setExecution?.({
+                            ...effectiveExecution,
+                            loop: {
+                              ...effectiveExecution.loop,
+                              indicator: {
+                                ...(effectiveExecution.loop?.indicator || {
+                                  type: "selector",
+                                  value: "",
+                                }),
+                                value: e.target.value,
+                              },
+                            },
+                          })
+                        }
+                        placeholder="Contoh: .btn-delete atau teks 'Tidak ada data'"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
                 </div>
                 <div className="mt-2 flex gap-4 text-sm">
                   <label className="flex items-center">
@@ -335,7 +399,7 @@ export default function ActionFlowSection({
                         ))}
                       </select>
                     ) : action.type === "navigate" ? (
-                      <input
+                      <HumanTypingInput
                         type="text"
                         value={action.target}
                         onChange={(e) =>
@@ -345,7 +409,7 @@ export default function ActionFlowSection({
                         className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                     ) : (
-                      <input
+                      <HumanTypingInput
                         type="text"
                         value={action.target}
                         onChange={(e) =>
@@ -364,7 +428,7 @@ export default function ActionFlowSection({
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Nilai (Opsional)
                     </label>
-                    <input
+                    <HumanTypingInput
                       type="text"
                       value={action.value || ""}
                       onChange={(e) =>
@@ -416,7 +480,7 @@ export default function ActionFlowSection({
                         <option value="text">Teks</option>
                         <option value="url">URL Pattern</option>
                       </select>
-                      <input
+                      <HumanTypingInput
                         type="text"
                         value={action.waitFor?.value || ""}
                         onChange={(e) =>
@@ -478,7 +542,7 @@ export default function ActionFlowSection({
               <option value="text">Teks</option>
               <option value="url">URL Pattern</option>
             </select>
-            <input
+            <HumanTypingInput
               type="text"
               value={successIndicator.value}
               onChange={(e) =>
@@ -513,7 +577,7 @@ export default function ActionFlowSection({
               <option value="text">Teks</option>
               <option value="url">URL Pattern</option>
             </select>
-            <input
+            <HumanTypingInput
               type="text"
               value={failureIndicator.value}
               onChange={(e) =>

@@ -13,17 +13,17 @@ import {
 } from "@xyflow/react";
 import { extractAllRows, getXlsxSheets } from "@/lib/api";
 import { runAutomation } from "@/app/actions/runAutomation";
-import TargetConfiguration from "@/app/editor/components/TargetConfiguration";
-import DataSourceSection from "@/app/editor/components/DataSourceSection";
-import FieldMappingSection from "@/app/editor/components/FieldMappingSection";
-import ActionFlowSection from "@/app/editor/components/ActionFlowSection";
-import AutomationPlanPreview from "@/app/editor/components/AutomationPlanPreview";
-import ExecutionReport from "@/app/editor/components/ExecutionReport";
-import CardNode from "./components/CardNode";
-import AddDataSourceNode from "./components/AddDataSourceNode";
-import PaletteNode from "./components/PaletteNode";
-import ActionNode from "./components/ActionNode";
-import ActionNodeEditor from "./components/ActionNodeEditor";
+import TargetConfiguration from "@/app/editor/components/target/TargetConfiguration";
+import DataSourceSection from "@/app/editor/components/data-source/DataSourceSection";
+import FieldMappingSection from "@/app/editor/components/field-mapping/FieldMappingSection";
+import ActionFlowSection from "@/app/editor/components/actions/ActionFlowSection";
+import AutomationPlanPreview from "@/app/editor/components/execution/AutomationPlanPreview";
+import ExecutionReport from "@/app/editor/components/execution/ExecutionReport";
+import CardNode from "./components/nodes/CardNode";
+import AddDataSourceNode from "./components/data-source/AddDataSourceNode";
+import PaletteNode from "./components/nodes/PaletteNode";
+import ActionNode from "./components/actions/ActionNode";
+import ActionNodeEditor from "./components/actions/ActionNodeEditor";
 import { useEditor } from "./context/EditorContext";
 import {
   NODE_IDS,
@@ -609,6 +609,13 @@ export default function EditorPage() {
   const onNodeClick = (_, node) => {
     // Handle action node
     if (node.type === "action") {
+      // Jika node yang sama diklik lagi, tutup panel (toggle)
+      if (selectedNode?.id === node.id && isDetailOpen) {
+        setIsDetailOpen(false);
+        setSelectedNode(null);
+        return;
+      }
+      // Jika node berbeda atau panel belum terbuka, buka panel
       setSelectedNode(node);
       setActivePanel("action");
       setIsDetailOpen(true);
@@ -617,12 +624,26 @@ export default function EditorPage() {
 
     const panel = node?.data?.panel;
     if (panel) {
+      // Jika panel yang sama diklik lagi, tutup panel (toggle)
+      if (activePanel === panel && isDetailOpen) {
+        setIsDetailOpen(false);
+        setSelectedNode(null);
+        return;
+      }
+      // Jika panel berbeda atau belum terbuka, buka panel baru
       setSelectedNode(null);
-      setActivePanel(
-        panel
-      ); /* pilih panel mana (target/data/mapping/action/preview) */
-      setIsDetailOpen(true); /* buka drawer kanan */
+      setActivePanel(panel);
+      setIsDetailOpen(true);
     }
+  };
+
+  /* -----------------------------------
+   Handler: klik di canvas (bukan di node)
+----------------------------------- */
+  const onPaneClick = () => {
+    // Tutup panel saat klik di area kosong canvas
+    setIsDetailOpen(false);
+    setSelectedNode(null);
   };
 
   /* -----------------------------------
@@ -1065,6 +1086,7 @@ export default function EditorPage() {
             onNodesChange={handleNodesChange}
             onEdgesChange={onEdgesChange}
             onNodeClick={onNodeClick}
+            onPaneClick={onPaneClick}
             onNodeDragStop={onNodeDragStop}
             onDrop={onDrop}
             onDragOver={onDragOver}
@@ -1083,7 +1105,7 @@ export default function EditorPage() {
       {isDetailOpen && (
         <div
           className="
-            absolute top-6 right-6 bottom-6 z-40 w-[380px] bg-white shadow-xl border border-gray-200 rounded-lg transition-all duration-300
+            absolute top-6 right-6 bottom-6 z-40 w-[460px] bg-white shadow-xl border border-gray-200 rounded-lg transition-all duration-300
             flex flex-col overflow-hidden
           "
           style={{
@@ -1095,13 +1117,6 @@ export default function EditorPage() {
             <h2 className="text-base font-semibold text-gray-800 truncate">
               Detail {activePanel}
             </h2>
-            <button
-              type="button"
-              onClick={() => setIsDetailOpen(false)}
-              className="cursor-pointer text-sm text-gray-500 hover:text-gray-700 flex-shrink-0 ml-2"
-            >
-              Tutup
-            </button>
           </div>
           <div className="p-3 flex-1 overflow-y-auto overflow-x-hidden space-y-3 min-w-0">
             {activePanel === "target" && (
@@ -1158,11 +1173,36 @@ export default function EditorPage() {
             {activePanel === "action" && selectedNode && (
               <ActionNodeEditor
                 node={selectedNode}
-                setNode={(updatedNode) => {
-                  setNodes((prev) =>
-                    prev.map((n) => (n.id === updatedNode.id ? updatedNode : n))
-                  );
-                  setSelectedNode(updatedNode);
+                setNode={(updateFnOrNode) => {
+                  setNodes((prev) => {
+                    // Cari node yang sedang diedit dari array nodes (bukan dari selectedNode yang mungkin stale)
+                    const currentNode = prev.find((n) => n.id === selectedNode.id);
+                    if (!currentNode) return prev;
+
+                    // Jika updateFnOrNode adalah function, gunakan untuk update
+                    // Jika bukan, langsung gunakan sebagai node baru
+                    const updatedNode = typeof updateFnOrNode === 'function' 
+                      ? updateFnOrNode(currentNode)
+                      : updateFnOrNode;
+
+                    // Pastikan ID match dengan selectedNode
+                    if (updatedNode.id !== selectedNode.id) {
+                      console.warn('Node ID mismatch:', updatedNode.id, 'vs', selectedNode.id);
+                      return prev;
+                    }
+
+                    // Update node di array
+                    const updated = prev.map((n) => 
+                      n.id === updatedNode.id ? updatedNode : n
+                    );
+                    
+                    // Update selectedNode dengan node terbaru
+                    const latestNode = updated.find((n) => n.id === updatedNode.id);
+                    if (latestNode) {
+                      setSelectedNode(latestNode);
+                    }
+                    return updated;
+                  });
                 }}
                 fieldMappings={fieldMappings}
                 onDelete={() => {

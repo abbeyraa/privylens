@@ -3,30 +3,30 @@
 import { usePathname } from "next/navigation";
 import { useContext } from "react";
 import { EditorContext } from "@/app/editor/context/EditorContext";
-import PaletteNode from "@/app/editor/components/PaletteNode";
+import PaletteNode from "@/app/editor/components/nodes/PaletteNode";
 
 export default function EditorHeaderPalette() {
   const pathname = usePathname();
   // Home page (/) juga menampilkan editor, jadi cek / atau /editor
-  const isEditor = pathname === "/" || pathname?.startsWith("/editor");
+  const isEditor =
+    pathname === "/" || (pathname && pathname.startsWith("/editor"));
 
-  // Gunakan useContext langsung dengan optional check (tidak throw error jika context tidak ada)
+  // Gunakan useContext langsung dengan optional chaining
   // Context mungkin null jika EditorProvider belum mount
   const editorContext = useContext(EditorContext);
-  const hasDataSourceNode = editorContext?.hasDataSourceNode || false;
+  const hasDataSourceNode = editorContext?.hasDataSourceNode ?? false;
+  const nodeClassName =
+    "flex items-center justify-center w-30 h-15 border border-gray-200 rounded-md shadow-sm overflow-hidden transition-opacity";
 
   // Jika bukan editor page, tidak tampilkan
-  if (!isEditor) {
-    return null;
-  }
+  if (!isEditor) return null;
 
-  // Render node palette - selalu tampilkan jika di editor page
   return (
     <div className="flex flex-row items-center gap-3 flex-shrink-0">
-      {/* Node palette dengan ukuran kecil dan sama */}
+      {/* Data Source Node */}
       <div
         className={[
-          "flex items-center justify-center w-32 h-20 border border-gray-200 rounded-md shadow-sm overflow-hidden transition-opacity",
+          nodeClassName,
           hasDataSourceNode
             ? "bg-gray-100 opacity-50 cursor-not-allowed"
             : "bg-[#f7f7fa]",
@@ -44,7 +44,8 @@ export default function EditorHeaderPalette() {
           disabled={hasDataSourceNode}
         />
       </div>
-      <div className="flex items-center justify-center w-32 h-20 bg-[#f7f7fa] border border-gray-200 rounded-md shadow-sm overflow-hidden">
+      {/* Action Node */}
+      <div className={[nodeClassName, "bg-[#f7f7fa]"].join(" ")}>
         <PaletteNode
           orientation="landscape"
           nodeSize="small"
