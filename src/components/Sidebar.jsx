@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 import { Home, FilePlus, FolderOpen, Settings, FileText, Search } from "lucide-react";
 
 const menuItems = [
@@ -44,8 +45,19 @@ export default function Sidebar() {
     <aside className="w-64 bg-white border-r border-[#e5e5e5] flex flex-col h-full">
       {/* Logo/Brand */}
       <div className="px-6 py-5 border-b border-[#e5e5e5]">
-        <h1 className="text-xl font-bold text-gray-900">PrivyLens</h1>
-        <p className="text-xs text-gray-500 mt-1">Automation Builder</p>
+        <div className="flex items-center gap-3">
+          <Image
+            src="/logo.png"
+            alt="OtoMate Logo"
+            width={48}
+            height={48}
+            className="flex-shrink-0"
+          />
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">OtoMate</h1>
+            <p className="text-xs text-gray-500 mt-1">Automation Builder</p>
+          </div>
+        </div>
       </div>
 
       {/* Navigation Menu */}

@@ -1,5 +1,5 @@
 {
-  "name": "privylens",
+  "name": "otomate",
   "version": "0.1.0",
   "private": true,
   "main": "electron/main.js",
@@ -40,8 +40,8 @@
     "wait-on": "^9.0.3"
   },
   "build": {
-    "appId": "com.privylens.app",
-    "productName": "PrivyLens",
+    "appId": "com.otomate.app",
+    "productName": "OtoMate",
     "directories": {
       "output": "dist"
     },
@@ -65,7 +65,8 @@
           ]
         }
       ],
-      "icon": "public/logo.png"
+      "icon": "public/logo.png",
+      "iconName": "logo"
     },
     "mac": {
       "target": [

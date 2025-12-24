@@ -1,163 +1,152 @@
-# PrivyLens — Node-based Automation Editor + Playwright Runner
+# OtoMate — Automation Partner for Internal Operations
 
-## Ringkasan
+## Tentang OtoMate
 
-PrivyLens adalah aplikasi **Next.js (App Router)** dengan UI **node-based editor** untuk merancang “Automation Plan” (rencana otomasi) pengisian form berbasis browser, lalu mengeksekusinya di server menggunakan **Playwright (Chromium)**.
+OtoMate adalah platform automasi web berbasis **Playwright** dan **Electron** yang dirancang khusus untuk penggunaan internal kantor dan developer. Aplikasi ini menyediakan sistem automasi yang terkontrol, dapat diamati, dan dapat dipertanggungjawabkan untuk mendukung operasional harian yang efisien dan andal.
 
-- **Home (`/`)** langsung membuka **Editor**.
-- Route lama **`/automate`** sudah **redirect** ke home (Editor).
-
----
-
-## Konsep UI (Node-based)
-
-Di Editor, user **klik node/card** di canvas untuk mengisi detail di panel kanan.
-
-### Menambahkan Node
-
-- **Klik kanan** di area kosong canvas untuk menampilkan context menu
-- Pilih **"Sumber Data"** atau **"Alur Aksi"** untuk menambahkan node baru
-- Node akan ditambahkan di posisi klik kanan
-
-Saat ini Editor mendukung 2 mode:
-
-### 1) Data-driven
-
-Cocok untuk input form berdasarkan dataset.
-
-- **Sumber Data**: upload CSV/XLSX (diparse di browser) atau input manual
-- **Mode data**:
-  - `single` (1 baris)
-  - `batch` (semua baris)
-- **Field Mapping**: definisi field bisnis → label di halaman → `dataKey`
-- **Alur Aksi** bisa berisi `fill`, `click`, `wait`, `navigate`, `handleDialog`
-
-Eksekusi mengikuti mode data (`single/batch`).
-
-### 2) Action-only (bulk)
-
-Cocok untuk otomasi aksi berulang tanpa dataset (mis. bulk delete).
-
-- Tidak butuh **Sumber Data** dan **Field Mapping**
-- Alur aksi biasanya `click/wait/navigate/handleDialog`
-- Mendukung **loop** sampai kondisi terpenuhi (contoh: berhenti saat data habis)
-
-Konfigurasi loop disimpan di `plan.execution`:
-
-- `execution.mode`: `once` atau `loop`
-- `execution.loop.indicator`: selector/text/url yang dipakai sebagai trigger
-- `execution.loop.stopWhen`: `visible` atau `notVisible`
+OtoMate bukan sekadar alat otomatisasi klik, melainkan solusi automasi yang komprehensif dengan pendekatan terstruktur untuk merancang, menjalankan, dan memelihara proses automasi web dalam lingkungan kerja yang nyata.
 
 ---
 
-## Cara kerja (arsitektur singkat)
+## Masalah yang Diselesaikan
 
-1. UI Editor menyusun `plan`.
-2. Tombol **“Jalankan Automation Plan”** memanggil Server Action `runAutomation(plan)`.
-3. Server Action memanggil runner Playwright `executeAutomationPlan(plan)`.
-4. Runner mengembalikan **execution report** → UI menampilkan ringkasan + detail.
+Dalam operasional internal, tim sering menghadapi tantangan:
 
-Komponen kunci:
+- **Tugas Berulang yang Membosankan**: Pengisian form, input data, atau proses administratif yang dilakukan berulang kali menghabiskan waktu dan rentan terhadap kesalahan manusia.
+- **Kurangnya Kontrol dan Observabilitas**: Proses automasi yang tidak transparan membuat sulit untuk memahami apa yang terjadi, mengapa terjadi kegagalan, atau bagaimana memperbaikinya.
+- **Ketidakstabilan dan Perubahan UI**: Website yang sering berubah membutuhkan pemeliharaan automasi yang terus-menerus, namun tanpa mekanisme yang jelas untuk mendeteksi dan menangani perubahan tersebut.
+- **Kurangnya Akuntabilitas**: Tidak ada catatan yang jelas tentang apa yang telah dijalankan, kapan, dan dengan hasil seperti apa, sehingga sulit untuk audit atau troubleshooting.
 
-- UI editor: `src/app/editor/page.jsx`
-- Server action: `src/app/actions/runAutomation.js`
-- Runner: `src/lib/playwright-runner/` (modular structure)
-- Parsing CSV/XLSX: `src/lib/api.js` (langsung di frontend)
-- Canvas/node editor: `@xyflow/react`
-
-### Struktur Playwright Runner (Modular)
-
-Runner Playwright diorganisir dalam struktur modular untuk kemudahan maintenance dan debugging:
-
-- `index.js` - Entry point utama
-- `loader.js` - Lazy loading Playwright library
-- `normalize.js` - Normalisasi dan validasi automation plan
-- `login.js` - Handler untuk proses login
-- `navigation.js` - Handler untuk navigasi steps
-- `actions.js` - Eksekusi actions (fill, click, wait, navigate, handleDialog)
-- `elementFinder.js` - Pencarian elemen berdasarkan label atau selector
-- `clickHandler.js` - Handler klik dengan multiple strategies
-- `humanType.js` - Human-like typing effect untuk input
-- `indicators.js` - Handler untuk page ready, wait, dan check indicators
-- `dialog.js` - Auto-accept handler untuk browser dialogs
-- `utils.js` - Utility functions (string escaping)
+OtoMate dirancang untuk mengatasi semua tantangan ini dengan pendekatan yang sistematis dan berkelanjutan.
 
 ---
 
-## Contoh Automation Plan
+## Filosofi Desain
 
-### A) Data-driven (disederhanakan)
+### 1. Kontrol Penuh atas Proses
 
-```json
-{
-  "target": {
-    "url": "https://example.com/form",
-    "pageReadyIndicator": { "type": "selector", "value": ".form-root" }
-  },
-  "dataSource": {
-    "type": "upload",
-    "rows": [{ "nama": "A", "email": "a@example.com" }],
-    "mode": "single",
-    "selectedRowIndex": 0
-  },
-  "fieldMappings": [
-    {
-      "name": "Nama Lengkap",
-      "type": "text",
-      "dataKey": "nama",
-      "required": true,
-      "labels": ["Nama", "Nama Lengkap"],
-      "fallbackLabels": ["Full Name"]
-    }
-  ],
-  "actions": [
-    { "type": "fill", "target": "Nama Lengkap" },
-    { "type": "click", "target": "Submit" }
-  ]
-}
-```
+Setiap automasi di OtoMate dimulai dari **Automation Plan** yang terdefinisi dengan jelas. Plan ini bukan hanya urutan aksi, melainkan dokumen yang menjelaskan tujuan, konteks, dan parameter eksekusi. Dengan pendekatan ini, setiap automasi dapat direview, dimodifikasi, dan dipertanggungjawabkan.
 
-### B) Action-only bulk delete (loop sampai data habis)
+### 2. Observabilitas yang Komprehensif
 
-```json
-{
-  "target": {
-    "url": "https://example.com/transactions",
-    "pageReadyIndicator": { "type": "selector", "value": ".table" }
-  },
-  "dataSource": {
-    "type": "manual",
-    "rows": [{}],
-    "mode": "single",
-    "selectedRowIndex": 0
-  },
-  "fieldMappings": [],
-  "execution": {
-    "mode": "loop",
-    "loop": {
-      "maxIterations": 200,
-      "delaySeconds": 0,
-      "stopWhen": "notVisible",
-      "indicator": { "type": "selector", "value": "button.btn-delete" }
-    }
-  },
-  "actions": [
-    { "type": "click", "target": "button.btn-delete" },
-    { "type": "handleDialog" }
-  ]
-}
-```
+OtoMate menyediakan visibilitas penuh terhadap proses automasi. Setiap eksekusi menghasilkan laporan detail yang mencakup status setiap langkah, waktu eksekusi, dan konteks kegagalan jika terjadi. Sistem logging yang terstruktur memungkinkan pelacakan historis dan analisis pola.
+
+### 3. Keandalan Jangka Panjang
+
+Dengan fitur **versioning** untuk Automation Plan, perubahan dapat dilacak dan di-rollback jika diperlukan. **Safe Run** mode memungkinkan pengujian tanpa risiko, sementara **Session Reuse** mengoptimalkan penggunaan sumber daya dan menjaga konsistensi eksekusi.
+
+### 4. Inteligensi dalam Menangani Kegagalan
+
+**Failure Intelligence** secara otomatis mengklasifikasikan kegagalan berdasarkan kategori (perubahan selector, validasi form, session expired, dll.) dan memberikan rekomendasi perbaikan yang dapat ditindaklanjuti. **Assisted Repair** mode memungkinkan intervensi manual saat diperlukan, dengan kemampuan untuk pause, perbaiki, dan resume secara deterministik.
+
+### 5. Pembelajaran dan Adaptasi
+
+**Inspector Mode** membantu pengguna memahami proses interaksi halaman web sebelum menyusun automasi. Dengan observasi yang sistematis, pengguna dapat merancang automasi yang lebih robust dan sesuai dengan karakteristik halaman target.
 
 ---
 
-## Menjalankan aplikasi
+## Fitur Utama
+
+### Automation Plan
+
+Automation Plan adalah dokumen terstruktur yang mendefinisikan seluruh proses automasi, meliputi:
+
+- **Target Configuration**: URL target, indikator kesiapan halaman, dan konfigurasi login jika diperlukan
+- **Data Source**: Sumber data (CSV/XLSX atau manual) dan mode eksekusi (single atau batch)
+- **Field Mapping**: Pemetaan field bisnis ke elemen halaman dengan dukungan multiple label dan fallback
+- **Action Flow**: Urutan aksi yang akan dieksekusi (fill, click, wait, navigate, handleDialog)
+- **Execution Configuration**: Mode eksekusi (once atau loop) dengan kondisi penghentian yang dapat dikonfigurasi
+- **Success/Failure Indicators**: Indikator untuk mendeteksi keberhasilan atau kegagalan proses
+
+Plan ini dapat disimpan, di-version, dan digunakan kembali untuk eksekusi berulang.
+
+### Versioning
+
+Setiap perubahan pada Automation Plan dapat disimpan sebagai versi baru. Sistem versioning memungkinkan:
+
+- Pelacakan perubahan dari waktu ke waktu
+- Rollback ke versi sebelumnya jika diperlukan
+- Perbandingan antar versi untuk memahami evolusi plan
+- Dokumentasi alasan perubahan melalui metadata versi
+
+### Safe Run Mode
+
+Safe Run adalah mode pengujian yang mengeksekusi automasi tanpa melakukan aksi yang bersifat permanen (seperti submit form). Mode ini berguna untuk:
+
+- Memvalidasi logika automasi sebelum eksekusi penuh
+- Menguji perubahan pada plan tanpa risiko
+- Debugging dan troubleshooting tanpa mempengaruhi data produksi
+
+### Session Reuse
+
+Session Reuse mengoptimalkan penggunaan browser session untuk mengurangi overhead dan menjaga konsistensi. Fitur ini:
+
+- Memanfaatkan session yang sudah ada untuk mengurangi waktu loading
+- Menjaga state browser antar eksekusi untuk proses yang berhubungan
+- Mengurangi konsumsi sumber daya dengan menghindari inisialisasi berulang
+
+### Failure Intelligence
+
+Sistem Failure Intelligence secara otomatis menganalisis kegagalan dan memberikan insight yang dapat ditindaklanjuti:
+
+- **Klasifikasi Otomatis**: Mengkategorikan kegagalan berdasarkan pola error (selector change, label change, form validation, session expired, timing issue, dll.)
+- **Severity Assessment**: Menentukan tingkat keparahan kegagalan (critical, high, medium, low)
+- **Rekomendasi Perbaikan**: Menghasilkan saran spesifik untuk mengatasi masalah berdasarkan klasifikasi
+- **Pattern Analysis**: Menganalisis pola kegagalan dari multiple failures untuk mengidentifikasi masalah sistemik
+
+### Assisted Repair
+
+Assisted Repair mode memungkinkan intervensi manual saat terjadi kegagalan:
+
+- **Pause on Failure**: Otomatis pause saat kegagalan terdeteksi
+- **Manual Intervention**: Pengguna dapat memperbaiki masalah secara manual di browser
+- **Deterministic Resume**: Resume eksekusi dari titik yang tepat setelah perbaikan
+- **State Preservation**: Menyimpan state eksekusi untuk recovery yang akurat
+
+### Inspector Mode
+
+Inspector Mode adalah alat observasi interaktif untuk memahami proses interaksi halaman web:
+
+- **Browser Preview**: Membuka halaman target dalam browser nyata untuk observasi
+- **Process Timeline**: Menampilkan events secara kronologis (navigation, loading, element appear, click, input, dll.)
+- **Event Recording**: Mencatat berbagai jenis events untuk analisis
+- **Action Flow Generation**: Mengkonversi selected events menjadi draft Automation Plan
+- **Draft Management**: Menyimpan dan memuat draft untuk iterasi desain
+
+---
+
+## Arsitektur Teknis
+
+OtoMate dibangun dengan teknologi modern untuk memastikan keandalan dan performa:
+
+- **Frontend**: Next.js (App Router) dengan React untuk UI yang responsif dan interaktif
+- **Node-based Editor**: Menggunakan `@xyflow/react` untuk visual editor yang intuitif
+- **Automation Engine**: Playwright (Chromium) untuk eksekusi automasi yang robust
+- **Desktop App**: Electron untuk distribusi sebagai aplikasi desktop yang dapat dijalankan secara standalone
+- **Modular Architecture**: Struktur kode yang modular untuk kemudahan maintenance dan pengembangan
+
+### Struktur Runner
+
+Playwright runner diorganisir dalam struktur modular:
+
+- **Normalization**: Validasi dan normalisasi automation plan
+- **Login Handler**: Manajemen proses autentikasi
+- **Navigation Handler**: Penanganan navigasi dan routing
+- **Action Executor**: Eksekusi berbagai jenis aksi dengan multiple strategies
+- **Element Finder**: Pencarian elemen dengan berbagai strategi (selector, label, role, text, dll.)
+- **Indicator Handlers**: Penanganan page ready, wait, dan check indicators
+- **Dialog Handler**: Auto-handling untuk browser dialogs
+
+---
+
+## Penggunaan
 
 ### Prasyarat
 
-- **Node.js** 18+
-- **npm**
+- **Node.js** 18 atau lebih tinggi
+- **npm** untuk manajemen dependensi
 
-> Catatan: repo ini menginstall browser Playwright Chromium via script `postinstall`.
+> **Catatan**: Repositori ini secara otomatis menginstall browser Playwright Chromium melalui script `postinstall`.
 
 ### Instalasi
 
@@ -165,126 +154,156 @@ Runner Playwright diorganisir dalam struktur modular untuk kemudahan maintenance
 npm install
 ```
 
-### Development
+### Development Mode
 
 ```bash
 npm run dev
 ```
 
-Akses: `http://localhost:3000` (Editor)
+Akses aplikasi di `http://localhost:3000`
 
-### Production build
+### Production Build
 
 ```bash
 npm run build
 npm start
 ```
 
----
-
-## Fitur Playwright Automation
-
-### Human-like Typing
-
-- Input text menggunakan efek typing seperti manusia dengan random delay (50-150ms per karakter)
-- Membantu menghindari deteksi sebagai automated input
-
-### Robust Element Finding
-
-- Multiple strategies untuk menemukan elemen:
-  - CSS selector
-  - Role-based (button, link)
-  - Text content matching (exact & contains)
-  - Attribute-based (title, aria-label, onclick)
-  - XPath fallback
-  - Icon-based dengan parent lookup
-
-### Multiple Click Strategies
-
-- Normal click dengan auto-wait
-- Force click untuk overlay issues
-- JavaScript click untuk bypass event handlers
-- Manual event dispatch
-
-### Dialog Handling
-
-- Auto-accept untuk browser dialogs (alert, confirm, prompt)
-- Handler dipasang otomatis jika ada action `handleDialog`
-
-### Indicators
-
-- **Page Ready Indicator**: Menunggu halaman selesai load (timeout 30s)
-- **Wait Indicator**: Menunggu indikator setelah action (timeout 10s)
-- **Check Indicator**: Cek keberadaan indikator tanpa menunggu
-- Support untuk selector, text, dan URL-based indicators
-
-## Catatan penting (Playwright / environment)
-
-- Runner berjalan **server-side** (Server Action).
-- Di `src/lib/playwright-runner/index.js`, browser diluncurkan dengan `headless: false` (Chromium akan muncul).
-  - Untuk CI / server tanpa display, ubah ke `headless: true`.
-- Kredensial login (jika dipakai) ikut terkirim sebagai bagian dari plan → gunakan hanya untuk dev/test.
-
----
-
-## Testing & Lint
+### Electron Desktop App
 
 ```bash
-npm run lint
+# Development mode
+npm run electron:dev
+
+# Build untuk Windows
+npm run electron:build:win
+
+# Build untuk macOS
+npm run electron:build:mac
+
+# Build untuk Linux
+npm run electron:build:linux
 ```
 
+---
+
+## Workflow Penggunaan
+
+### 1. Merancang Automation Plan
+
+Gunakan **Editor** untuk merancang Automation Plan dengan pendekatan visual:
+
+- Konfigurasi target URL dan indikator kesiapan halaman
+- Tambahkan sumber data (jika diperlukan) atau gunakan mode action-only
+- Definisikan field mapping untuk data-driven automation
+- Susun action flow dengan drag-and-drop node editor
+- Konfigurasi execution mode dan indikator sukses/gagal
+
+### 2. Observasi dengan Inspector (Opsional)
+
+Sebelum menyusun plan, gunakan **Inspector Mode** untuk:
+
+- Mengamati interaksi halaman secara real-time
+- Mencatat events penting dalam timeline
+- Generate draft action flow dari events yang terpilih
+
+### 3. Pengujian dengan Safe Run
+
+Sebelum eksekusi penuh, uji plan dengan **Safe Run Mode**:
+
+- Validasi logika automasi tanpa risiko
+- Identifikasi masalah potensial sebelum produksi
+- Pastikan semua aksi dapat dieksekusi dengan benar
+
+### 4. Eksekusi dan Monitoring
+
+Jalankan automasi dan pantau proses:
+
+- Eksekusi menghasilkan execution report yang detail
+- Setiap langkah dicatat dengan status dan waktu
+- Kegagalan otomatis dianalisis oleh Failure Intelligence
+
+### 5. Penanganan Kegagalan
+
+Jika terjadi kegagalan:
+
+- Review klasifikasi dan rekomendasi dari Failure Intelligence
+- Gunakan Assisted Repair untuk intervensi manual jika diperlukan
+- Update Automation Plan berdasarkan insight yang diperoleh
+- Simpan sebagai versi baru untuk pelacakan perubahan
+
+---
+
+## Keamanan dan Best Practices
+
+### Kredensial dan Data Sensitif
+
+- Kredensial login disimpan sebagai bagian dari Automation Plan → **Gunakan hanya untuk development/testing**
+- Untuk produksi, pertimbangkan menggunakan environment variables atau sistem manajemen secret yang aman
+- Jangan commit kredensial ke version control
+
+### Safe Run untuk Testing
+
+- Selalu uji plan baru dengan Safe Run mode sebelum eksekusi penuh
+- Gunakan Safe Run untuk memvalidasi perubahan pada plan yang sudah ada
+
+### Versioning dan Dokumentasi
+
+- Simpan setiap perubahan signifikan sebagai versi baru
+- Dokumentasikan alasan perubahan dalam metadata versi
+- Review versi sebelumnya untuk memahami evolusi plan
+
+### Monitoring dan Logging
+
+- Review execution report secara rutin untuk mengidentifikasi pola kegagalan
+- Gunakan Failure Intelligence untuk memahami akar masalah
+- Maintain log eksekusi untuk audit dan troubleshooting
+
+---
+
+## Testing & Quality Assurance
+
 ```bash
+# Linting
+npm run lint
+
+# Playwright tests
 npx playwright test
 ```
 
 ---
 
-## Struktur proyek (ringkas)
+## Struktur Proyek
 
-```text
-privylens/
-├── public/
+```
+otomate/
+├── electron/              # Electron main process files
+├── public/               # Static assets
 ├── src/
 │   ├── app/
-│   │   ├── actions/
-│   │   │   └── runAutomation.js      # Server action untuk eksekusi
-│   │   ├── automate/                 # route lama (redirect ke /)
-│   │   │   └── page.jsx
-│   │   ├── editor/
+│   │   ├── actions/      # Server actions (runAutomation, startInspector)
+│   │   ├── create-template/  # Template creation page
+│   │   ├── editor/       # Main automation editor
 │   │   │   ├── components/
-│   │   │   │   ├── actions/         # Action node components
-│   │   │   │   │   ├── ActionNode.jsx
-│   │   │   │   │   ├── ActionNodeEditor.jsx
-│   │   │   │   │   └── ActionFlowSection.jsx
-│   │   │   │   ├── data-source/     # Data source components
-│   │   │   │   │   ├── AddDataSourceNode.jsx
-│   │   │   │   │   └── DataSourceSection.jsx
-│   │   │   │   ├── field-mapping/    # Field mapping components
-│   │   │   │   │   └── FieldMappingSection.jsx
-│   │   │   │   ├── execution/       # Execution & preview components
-│   │   │   │   │   ├── AutomationPlanPreview.jsx
-│   │   │   │   │   └── ExecutionReport.jsx
-│   │   │   │   ├── nodes/           # Node components
-│   │   │   │   │   ├── CardNode.jsx
-│   │   │   │   │   └── PaletteNode.jsx
-│   │   │   │   └── target/          # Target configuration
-│   │   │   │       └── TargetConfiguration.jsx
-│   │   │   ├── context/
-│   │   │   │   └── EditorContext.jsx # Context untuk state management
-│   │   │   ├── utils/               # Utility functions
-│   │   │   │   ├── nodeHelpers.js
-│   │   │   │   ├── edgeHelpers.js
-│   │   │   │   └── validationHelpers.js
-│   │   │   ├── layout.jsx
-│   │   │   └── page.jsx              # Editor (node-based)
-│   │   ├── layout.jsx
-│   │   └── page.jsx                  # Home -> Editor
-│   ├── components/
-│   │   ├── Header.jsx
-│   │   └── EditorProviderWrapper.jsx
+│   │   │   │   ├── actions/        # Action node components
+│   │   │   │   ├── data-source/    # Data source components
+│   │   │   │   ├── execution/     # Execution & report components
+│   │   │   │   ├── field-mapping/  # Field mapping components
+│   │   │   │   ├── nodes/          # Base node components
+│   │   │   │   └── target/         # Target configuration
+│   │   │   ├── context/            # Editor state management
+│   │   │   └── utils/              # Editor utilities
+│   │   ├── inspector/    # Inspector mode page
+│   │   ├── logs/         # Execution logs viewer
+│   │   ├── settings/     # Application settings
+│   │   └── templates/    # Automation plan templates
+│   ├── components/        # Shared UI components
 │   └── lib/
 │       ├── api.js                    # CSV/XLSX parsing
-│       └── playwright-runner/       # Modular Playwright runner
+│       ├── assistedRepair.js         # Assisted repair utilities
+│       ├── failureIntelligence.js    # Failure analysis system
+│       ├── inspectorRecorder.js     # Inspector event recording
+│       └── playwright-runner/        # Modular Playwright runner
 │           ├── index.js              # Entry point
 │           ├── loader.js             # Playwright loader
 │           ├── normalize.js          # Plan normalizer
@@ -293,10 +312,38 @@ privylens/
 │           ├── actions.js            # Action executor
 │           ├── elementFinder.js      # Element finder
 │           ├── clickHandler.js       # Click handler
-│           ├── humanType.js          # Human typing
+│           ├── humanType.js          # Human-like typing
 │           ├── indicators.js         # Indicator handlers
 │           ├── dialog.js             # Dialog handler
 │           └── utils.js              # Utilities
-└── tests/
-    └── example.spec.js
+└── tests/                # Test files
 ```
+
+---
+
+## Visi Jangka Panjang
+
+OtoMate dirancang sebagai alat kerja jangka panjang yang:
+
+- **Stabil dan Dapat Diandalkan**: Arsitektur yang solid dan praktik pengembangan yang baik memastikan aplikasi dapat diandalkan untuk penggunaan sehari-hari
+- **Mudah Dipelihara**: Struktur modular dan dokumentasi yang jelas memudahkan maintenance dan pengembangan lebih lanjut
+- **Dapat Dikembangkan**: Ekstensibilitas memungkinkan penambahan fitur baru sesuai kebutuhan operasional
+- **Berfokus pada Workflow Nyata**: Setiap fitur dirancang untuk menyelesaikan masalah nyata dalam lingkungan kerja internal
+
+---
+
+## Kontribusi dan Dukungan
+
+OtoMate adalah aplikasi internal yang dikembangkan untuk mendukung operasional perusahaan. Untuk pertanyaan, saran, atau laporan masalah, silakan hubungi tim pengembang internal.
+
+---
+
+## Lisensi
+
+Aplikasi ini adalah proprietary software untuk penggunaan internal perusahaan.
+
+---
+
+**OtoMate** — Automation Partner for Internal Operations
+
+*Mengotomatisasi dengan kontrol, observabilitas, dan akuntabilitas.*
