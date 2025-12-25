@@ -96,18 +96,23 @@ export function clearEditorState() {
 /**
  * Save execution log
  */
-export function saveExecutionLog(report, plan) {
+export function saveExecutionLog(report, plan, metadata = {}) {
   try {
     const logs = getExecutionLogs();
     const newLog = {
       id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       timestamp: new Date().toISOString(),
-      report,
+      report: {
+        ...report,
+        endTime: report.endTime || new Date().toISOString(),
+      },
       plan: {
         // Save minimal plan info (no sensitive data)
         target: {
           url: plan.target?.url || "",
         },
+        templateName: metadata.templateName || plan.templateName || "Manual Execution",
+        templateVersion: metadata.templateVersion || plan.templateVersion || "N/A",
         summary: report.summary,
       },
     };

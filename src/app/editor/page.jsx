@@ -633,7 +633,7 @@ export default function EditorPage() {
               localStorage.removeItem("inspector_draft_actions");
               
               // Remove query param
-              window.history.replaceState({}, "", "/create-template");
+              window.history.replaceState({}, "", "/editor");
             }
           }
         } catch (error) {

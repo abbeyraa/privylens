@@ -1,11 +1,10 @@
 "use client";
 
-import { Settings as SettingsIcon, User, Bell, Shield, Database } from "lucide-react";
+import { Settings as SettingsIcon, Database } from "lucide-react";
 import { useState } from "react";
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState({
-    notifications: true,
     autoSave: true,
     darkMode: false,
     language: "id",
@@ -38,31 +37,6 @@ export default function SettingsPage() {
             { value: "id", label: "Bahasa Indonesia" },
             { value: "en", label: "English" },
           ],
-        },
-      ],
-    },
-    {
-      title: "Notifications",
-      icon: Bell,
-      settings: [
-        {
-          key: "notifications",
-          label: "Enable Notifications",
-          description: "Terima notifikasi untuk event penting",
-          type: "toggle",
-        },
-      ],
-    },
-    {
-      title: "Security",
-      icon: Shield,
-      settings: [
-        {
-          key: "twoFactor",
-          label: "Two-Factor Authentication",
-          description: "Tambahkan lapisan keamanan ekstra",
-          type: "toggle",
-          disabled: true,
         },
       ],
     },
@@ -148,7 +122,11 @@ export default function SettingsPage() {
                                   ? "bg-blue-600"
                                   : "bg-gray-300"
                               }
-                              ${setting.disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
+                              ${
+                                setting.disabled
+                                  ? "opacity-50 cursor-not-allowed"
+                                  : "cursor-pointer"
+                              }
                             `}
                           >
                             <span
@@ -203,4 +181,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-

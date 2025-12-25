@@ -171,7 +171,7 @@ export default function InspectorPage() {
 
     if (action) {
       // Navigate to editor with draft flag
-      router.push("/create-template?importDraft=true");
+      router.push("/editor?importDraft=true");
     } else {
       // Copy to clipboard
       navigator.clipboard.writeText(JSON.stringify(draft, null, 2));
@@ -239,7 +239,7 @@ export default function InspectorPage() {
             </p>
           </div>
           <Link
-            href="/create-template"
+            href="/templates"
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
           >
             Kembali ke Editor
