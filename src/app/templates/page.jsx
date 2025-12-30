@@ -19,7 +19,11 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { getTemplates, saveTemplates, migrateToFileStorage } from "@/lib/templateStorage";
+import {
+  getTemplates,
+  saveTemplates,
+  migrateToFileStorage,
+} from "@/lib/templateStorage";
 
 export default function TemplatesPage() {
   const router = useRouter();
@@ -377,6 +381,14 @@ export default function TemplatesPage() {
                         >
                           <Edit className="w-4 h-4" />
                           Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteTemplate(template.id)}
+                          className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium flex items-center gap-2"
+                          title="Hapus template"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Hapus
                         </button>
                         <button
                           onClick={() => toggleTemplateExpansion(template.id)}

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { getExecutionLogs } from "@/lib/sessionStorage";
+import { getTemplates, migrateToFileStorage } from "@/lib/templateStorage";
 
 export default function HomePage() {
   const [executions, setExecutions] = useState([]);
@@ -30,7 +31,18 @@ export default function HomePage() {
     loadData();
   }, []);
 
-  const loadData = () => {
+  const loadData = async () => {
+    // Migrate templates first (only runs once)
+    await migrateToFileStorage();
+    
+    // Load templates
+    const templates = await getTemplates();
+    
+    // Count active templates (isActive: true)
+    const activeTemplates = templates.filter((t) => t.isActive !== false);
+    const totalTemplates = activeTemplates.length;
+
+    // Load execution logs
     const logs = getExecutionLogs();
     setExecutions(logs);
 
@@ -58,9 +70,6 @@ export default function HomePage() {
         (log.report?.status === "failed" || log.report?.status === "error")
       );
     }).length;
-
-    // Mock templates count (in real app, this would come from templates storage)
-    const totalTemplates = 3; // This would be from actual templates data
 
     setStats({
       totalTemplates,

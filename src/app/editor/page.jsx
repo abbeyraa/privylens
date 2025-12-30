@@ -41,7 +41,9 @@ import {
   Plus,
   CheckCircle2,
   AlertCircle,
+  ArrowLeft,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 // Helper untuk convert state ke steps
 const convertStateToSteps = (state) => {
@@ -303,6 +305,7 @@ function SortableStepCard({
 
 export default function EditorPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   // State management
   const [steps, setSteps] = useState([]);
@@ -1079,7 +1082,18 @@ export default function EditorPage() {
       {/* Header */}
       <div className="px-8 py-4 border-b border-[#e5e5e5] bg-white">
         <div className="flex items-center justify-between">
-          <div className="flex-1">
+          <div className="flex-1 flex items-center gap-4">
+            {/* Back Button - Only show when editing existing template */}
+            {(currentTemplateId || searchParams.get("mode") === "edit") && (
+              <button
+                onClick={() => router.push("/templates")}
+                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2"
+                title="Kembali ke halaman templates"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+            )}
+            <div className="flex-1">
             {isEditingName ? (
               <input
                 type="text"
@@ -1132,6 +1146,7 @@ export default function EditorPage() {
                 {templateDescription || "Klik untuk menambahkan deskripsi"}
               </p>
             )}
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <label className="flex items-center gap-2 text-sm text-gray-700">
