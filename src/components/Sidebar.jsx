@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { Home, FilePlus, FolderOpen, Settings, FileText, Search, PlayCircle } from "lucide-react";
+import { Home, FilePlus, FolderOpen, Settings, FileText, Search, PlayCircle, Code } from "lucide-react";
 
 const menuItems = [
   {
@@ -30,6 +30,11 @@ const menuItems = [
     name: "Inspector",
     href: "/inspector",
     icon: Search,
+  },
+  {
+    name: "Sandbox",
+    href: "/sandbox",
+    icon: Code,
   },
   {
     name: "Settings",
