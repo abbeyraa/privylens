@@ -27,6 +27,7 @@ import {
   saveExecutionLog,
 } from "@/lib/sessionStorage";
 import { getSetting } from "@/lib/settingsStorage";
+import { getTemplates, saveTemplates, migrateToFileStorage } from "@/lib/templateStorage";
 import StepCard from "./components/steps/StepCard";
 import StepEditor from "./components/steps/StepEditor";
 import AutomationPlanPreview from "./components/execution/AutomationPlanPreview";
@@ -41,29 +42,6 @@ import {
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
-
-const TEMPLATES_STORAGE_KEY = "otomate_templates";
-
-// Helper functions untuk template
-const getTemplates = () => {
-  try {
-    const stored = localStorage.getItem(TEMPLATES_STORAGE_KEY);
-    if (stored) return JSON.parse(stored);
-  } catch (error) {
-    console.error("Failed to load templates:", error);
-  }
-  return [];
-};
-
-const saveTemplates = (templates) => {
-  try {
-    localStorage.setItem(TEMPLATES_STORAGE_KEY, JSON.stringify(templates));
-    return true;
-  } catch (error) {
-    console.error("Failed to save templates:", error);
-    return false;
-  }
-};
 
 // Helper untuk convert state ke steps
 const convertStateToSteps = (state) => {
@@ -391,71 +369,78 @@ export default function EditorPage() {
     })
   );
 
-  // Load template if templateId in URL
+  // Migrate and load template if templateId in URL
   useEffect(() => {
-    const templateId = searchParams.get("templateId");
-    if (templateId) {
-      const templates = getTemplates();
-      const template = templates.find((t) => t.id === templateId);
-      if (template) {
-        setCurrentTemplateId(template.id);
-        setTemplateName(template.name);
-        setTemplateDescription(template.description || "");
-        
-        // Load template plan
-        const activeVersion = template.versions?.find((v) => v.isActive);
-        if (activeVersion?.plan) {
-          const plan = activeVersion.plan;
-          if (plan.target) {
-            setTargetUrl(plan.target.url || "");
-            setPageReadyType(plan.target.pageReadyIndicator?.type || "selector");
-            setPageReadyValue(plan.target.pageReadyIndicator?.value || "");
-            if (plan.target.login) {
-              setRequiresLogin(true);
-              setLoginUrl(plan.target.login.url || "");
-              setLoginUsername(plan.target.login.username || "");
-              setLoginPassword(plan.target.login.password || "");
+    // Migrate on mount (only runs once)
+    migrateToFileStorage();
+    
+    const loadTemplate = async () => {
+      const templateId = searchParams.get("templateId");
+      if (templateId) {
+        const templates = await getTemplates();
+        const template = templates.find((t) => t.id === templateId);
+        if (template) {
+          setCurrentTemplateId(template.id);
+          setTemplateName(template.name);
+          setTemplateDescription(template.description || "");
+          
+          // Load template plan
+          const activeVersion = template.versions?.find((v) => v.isActive);
+          if (activeVersion?.plan) {
+            const plan = activeVersion.plan;
+            if (plan.target) {
+              setTargetUrl(plan.target.url || "");
+              setPageReadyType(plan.target.pageReadyIndicator?.type || "selector");
+              setPageReadyValue(plan.target.pageReadyIndicator?.value || "");
+              if (plan.target.login) {
+                setRequiresLogin(true);
+                setLoginUrl(plan.target.login.url || "");
+                setLoginUsername(plan.target.login.username || "");
+                setLoginPassword(plan.target.login.password || "");
+              }
+              if (plan.target.navigation) {
+                setNavigationSteps(plan.target.navigation || []);
+              }
             }
-            if (plan.target.navigation) {
-              setNavigationSteps(plan.target.navigation || []);
+            if (plan.dataSource) {
+              setDataSourceType(plan.dataSource.type || "upload");
+              setRows(plan.dataSource.rows || []);
+              setDataMode(plan.dataSource.mode || "single");
+              setSelectedRowIndex(plan.dataSource.selectedRowIndex || 0);
+            }
+            if (plan.fieldMappings) {
+              setFieldMappings(plan.fieldMappings || []);
+            }
+            if (plan.actions) {
+              const actions = plan.actions.map((action, index) => ({
+                id: `action-${Date.now()}-${index}`,
+                type: "action",
+                position: { x: 60, y: 200 + index * 100 },
+                data: {
+                  actionType: action.type,
+                  actionTarget: action.target,
+                  actionValue: action.value,
+                  actionWaitFor: action.waitFor,
+                },
+              }));
+              setActionNodes(actions);
+            }
+            if (plan.successIndicator) {
+              setSuccessIndicator(plan.successIndicator);
+            }
+            if (plan.failureIndicator) {
+              setFailureIndicator(plan.failureIndicator);
+            }
+            if (plan.execution) {
+              setExecution(plan.execution);
             }
           }
-          if (plan.dataSource) {
-            setDataSourceType(plan.dataSource.type || "upload");
-            setRows(plan.dataSource.rows || []);
-            setDataMode(plan.dataSource.mode || "single");
-            setSelectedRowIndex(plan.dataSource.selectedRowIndex || 0);
-          }
-          if (plan.fieldMappings) {
-            setFieldMappings(plan.fieldMappings || []);
-          }
-          if (plan.actions) {
-            const actions = plan.actions.map((action, index) => ({
-              id: `action-${Date.now()}-${index}`,
-              type: "action",
-              position: { x: 60, y: 200 + index * 100 },
-              data: {
-                actionType: action.type,
-                actionTarget: action.target,
-                actionValue: action.value,
-                actionWaitFor: action.waitFor,
-              },
-            }));
-            setActionNodes(actions);
-          }
-          if (plan.successIndicator) {
-            setSuccessIndicator(plan.successIndicator);
-          }
-          if (plan.failureIndicator) {
-            setFailureIndicator(plan.failureIndicator);
-          }
-          if (plan.execution) {
-            setExecution(plan.execution);
-          }
+          return; // Don't load editor state if template is loaded
         }
-        return; // Don't load editor state if template is loaded
       }
-    }
+    };
+    
+    loadTemplate();
   }, [searchParams]);
 
   // Load state on mount (only if no template loaded)
@@ -648,11 +633,11 @@ export default function EditorPage() {
     const autoSaveEnabled = getSetting("autoSave");
     if (!autoSaveEnabled) return;
 
-    const timeoutId = setTimeout(() => {
+    const timeoutId = setTimeout(async () => {
       const plan = generateAutomationPlan();
       if (!plan.target?.url) return; // Don't save if invalid
 
-      const templates = getTemplates();
+      const templates = await getTemplates();
       const template = templates.find((t) => t.id === currentTemplateId);
       if (!template) return;
 
@@ -678,7 +663,9 @@ export default function EditorPage() {
       const updated = templates.map((t) =>
         t.id === currentTemplateId ? template : t
       );
-      saveTemplates(updated);
+      await saveTemplates(updated).catch((error) => {
+        console.error('Auto-save failed:', error);
+      });
     }, 2000); // Debounce 2 seconds
 
     return () => clearTimeout(timeoutId);
@@ -934,7 +921,7 @@ export default function EditorPage() {
   };
 
   // Save template
-  const handleSaveTemplate = (templateData) => {
+  const handleSaveTemplate = async (templateData) => {
     const plan = generateAutomationPlan();
     
     // Validasi minimal
@@ -943,7 +930,7 @@ export default function EditorPage() {
       return;
     }
 
-    const templates = getTemplates();
+    const templates = await getTemplates();
     
     const templateId = currentTemplateId || `template-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const name = templateData.name || templateName || "Untitled Template";
@@ -973,7 +960,8 @@ export default function EditorPage() {
         const updated = templates.map((t) =>
           t.id === currentTemplateId ? template : t
         );
-        if (saveTemplates(updated)) {
+        const success = await saveTemplates(updated);
+        if (success) {
           setTemplateName(name);
           setTemplateDescription(description);
           setSaveTemplateDialogOpen(false);
@@ -1012,7 +1000,8 @@ export default function EditorPage() {
     };
 
     const updated = [...templates, newTemplate];
-    if (saveTemplates(updated)) {
+    const success = await saveTemplates(updated);
+    if (success) {
       setCurrentTemplateId(templateId);
       setTemplateName(name);
       setTemplateDescription(description);

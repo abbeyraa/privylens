@@ -19,29 +19,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-
-const TEMPLATES_STORAGE_KEY = "otomate_templates";
-
-// Mock templates dengan versioning
-const getTemplates = () => {
-  try {
-    const stored = localStorage.getItem(TEMPLATES_STORAGE_KEY);
-    if (stored) return JSON.parse(stored);
-  } catch (error) {
-    console.error("Failed to load templates:", error);
-  }
-  return [];
-};
-
-const saveTemplates = (templates) => {
-  try {
-    localStorage.setItem(TEMPLATES_STORAGE_KEY, JSON.stringify(templates));
-    return true;
-  } catch (error) {
-    console.error("Failed to save templates:", error);
-    return false;
-  }
-};
+import { getTemplates, saveTemplates, migrateToFileStorage } from "@/lib/templateStorage";
 
 export default function TemplatesPage() {
   const router = useRouter();
@@ -51,11 +29,18 @@ export default function TemplatesPage() {
   const [expandedTemplates, setExpandedTemplates] = useState({});
 
   useEffect(() => {
-    loadTemplates();
+    // Migrate and load templates on mount
+    const initializeTemplates = async () => {
+      // Try migration first (only runs once)
+      await migrateToFileStorage();
+      // Then load templates
+      await loadTemplates();
+    };
+    initializeTemplates();
   }, []);
 
-  const loadTemplates = () => {
-    const loaded = getTemplates();
+  const loadTemplates = async () => {
+    const loaded = await getTemplates();
     setTemplates(loaded);
   };
 
@@ -89,7 +74,7 @@ export default function TemplatesPage() {
     }));
   };
 
-  const handleSaveTemplate = (templateData) => {
+  const handleSaveTemplate = async (templateData) => {
     const newTemplate = {
       id: `template-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       name: templateData.name || "Untitled Template",
@@ -116,13 +101,17 @@ export default function TemplatesPage() {
     };
 
     const updated = [...templates, newTemplate];
-    saveTemplates(updated);
-    setTemplates(updated);
-    setActiveSection("list");
-    alert("Template berhasil dibuat!");
+    const success = await saveTemplates(updated);
+    if (success) {
+      setTemplates(updated);
+      setActiveSection("list");
+      alert("Template berhasil dibuat!");
+    } else {
+      alert("Gagal menyimpan template. Silakan coba lagi.");
+    }
   };
 
-  const handleCreateVersion = (templateId, planData, notes) => {
+  const handleCreateVersion = async (templateId, planData, notes) => {
     const template = templates.find((t) => t.id === templateId);
     if (!template) return;
 
@@ -149,9 +138,13 @@ export default function TemplatesPage() {
     template.updatedAt = new Date().toISOString();
 
     const updated = templates.map((t) => (t.id === templateId ? template : t));
-    saveTemplates(updated);
-    setTemplates(updated);
-    alert(`Version ${versionNumber} berhasil dibuat!`);
+    const success = await saveTemplates(updated);
+    if (success) {
+      setTemplates(updated);
+      alert(`Version ${versionNumber} berhasil dibuat!`);
+    } else {
+      alert("Gagal menyimpan versi baru. Silakan coba lagi.");
+    }
   };
 
   const incrementVersion = (version) => {
@@ -162,7 +155,7 @@ export default function TemplatesPage() {
     return `${major}.${minor + 1}.0`;
   };
 
-  const handleActivateVersion = (templateId, version) => {
+  const handleActivateVersion = async (templateId, version) => {
     if (
       !confirm(
         `Apakah Anda yakin ingin mengaktifkan versi ${version.version}? Versi aktif saat ini akan dinonaktifkan.`
@@ -190,9 +183,13 @@ export default function TemplatesPage() {
       const updated = templates.map((t) =>
         t.id === templateId ? template : t
       );
-      saveTemplates(updated);
-      setTemplates(updated);
-      alert(`Version ${version.version} telah diaktifkan!`);
+      const success = await saveTemplates(updated);
+      if (success) {
+        setTemplates(updated);
+        alert(`Version ${version.version} telah diaktifkan!`);
+      } else {
+        alert("Gagal mengaktifkan versi. Silakan coba lagi.");
+      }
     }
   };
 
@@ -200,7 +197,7 @@ export default function TemplatesPage() {
     handleActivateVersion(templateId, version);
   };
 
-  const handleDeleteTemplate = (templateId) => {
+  const handleDeleteTemplate = async (templateId) => {
     if (
       !confirm(
         "Apakah Anda yakin ingin menghapus template ini? Tindakan ini tidak dapat dibatalkan."
@@ -210,9 +207,13 @@ export default function TemplatesPage() {
     }
 
     const updated = templates.filter((t) => t.id !== templateId);
-    saveTemplates(updated);
-    setTemplates(updated);
-    alert("Template telah dihapus!");
+    const success = await saveTemplates(updated);
+    if (success) {
+      setTemplates(updated);
+      alert("Template telah dihapus!");
+    } else {
+      alert("Gagal menghapus template. Silakan coba lagi.");
+    }
   };
 
   const handleUseTemplate = (template) => {

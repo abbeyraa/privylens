@@ -1,6 +1,7 @@
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
 const { spawn } = require("child_process");
+const templateStorage = require("./templateStorage");
 
 let mainWindow = null;
 let nextServer = null;
@@ -116,7 +117,57 @@ function startNextServer() {
   });
 }
 
+// Setup IPC handlers for template storage
+function setupIpcHandlers() {
+  // Read templates
+  ipcMain.handle('template-storage:read', async () => {
+    try {
+      const templates = templateStorage.readTemplates();
+      return { success: true, data: templates };
+    } catch (error) {
+      console.error('Error reading templates:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Write templates
+  ipcMain.handle('template-storage:write', async (event, templates) => {
+    try {
+      const result = templateStorage.writeTemplates(templates);
+      return result;
+    } catch (error) {
+      console.error('Error writing templates:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Migrate from localStorage
+  ipcMain.handle('template-storage:migrate', async (event, localStorageData) => {
+    try {
+      const result = templateStorage.migrateFromLocalStorage(localStorageData);
+      return result;
+    } catch (error) {
+      console.error('Error migrating templates:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Get storage info
+  ipcMain.handle('template-storage:info', async () => {
+    try {
+      const info = templateStorage.getStorageInfo();
+      return { success: true, data: info };
+    } catch (error) {
+      console.error('Error getting storage info:', error);
+      return { success: false, error: error.message };
+    }
+  });
+}
+
 app.whenReady().then(() => {
+  // Setup IPC handlers
+  setupIpcHandlers();
+
   startNextServer();
 
   setTimeout(

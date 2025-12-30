@@ -30,9 +30,12 @@ export default function InspectorPage() {
   const [showOnlyImportant, setShowOnlyImportant] = useState(false);
   const [browserUrl, setBrowserUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [sessionId, setSessionId] = useState(null);
+  const [screenshotUrl, setScreenshotUrl] = useState(null);
   const eventIdCounter = useRef(0);
   const startTime = useRef(null);
   const router = useRouter();
+  const screenshotIntervalRef = useRef(null);
 
   // Start inspection
   const handleStartInspection = async () => {
@@ -41,6 +44,7 @@ export default function InspectorPage() {
       return;
     }
 
+    setIsLoading(true);
     setIsInspecting(true);
     setEvents([]);
     setSelectedEvents(new Set());
@@ -48,24 +52,116 @@ export default function InspectorPage() {
     startTime.current = Date.now();
     eventIdCounter.current = 0;
 
-    // Simulate browser events (in real implementation, this would connect to Playwright)
-    // For now, we'll simulate events
-    simulateBrowserEvents();
+    try {
+      // Import startInspector dynamically
+      const { startInspector } = await import("@/app/actions/startInspector");
+      const result = await startInspector(targetUrl);
+
+      if (result.success) {
+        setSessionId(result.sessionId);
+        // Start polling for screenshots
+        startScreenshotPolling(result.sessionId);
+        // Simulate browser events (in real implementation, this would connect to Playwright)
+        simulateBrowserEvents();
+      } else {
+        alert(`Gagal memulai inspector: ${result.error}`);
+        setIsInspecting(false);
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error("Error starting inspector:", error);
+      alert(`Error: ${error.message}`);
+      setIsInspecting(false);
+      setIsLoading(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Start screenshot polling
+  const startScreenshotPolling = (sessionId) => {
+    // Clear existing interval
+    if (screenshotIntervalRef.current) {
+      clearInterval(screenshotIntervalRef.current);
+    }
+
+    // Update screenshot immediately
+    updateScreenshot(sessionId);
+
+    // Poll every 1 second
+    screenshotIntervalRef.current = setInterval(() => {
+      updateScreenshot(sessionId);
+    }, 1000);
+  };
+
+  // Update screenshot
+  const updateScreenshot = async (sessionId) => {
+    try {
+      const response = await fetch(
+        `/api/inspector/screenshot?sessionId=${sessionId}&t=${Date.now()}`
+      );
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        // Revoke old URL to prevent memory leak
+        if (screenshotUrl) {
+          URL.revokeObjectURL(screenshotUrl);
+        }
+        setScreenshotUrl(url);
+      }
+    } catch (error) {
+      console.error("Error fetching screenshot:", error);
+    }
+  };
+
+  // Stop screenshot polling
+  const stopScreenshotPolling = () => {
+    if (screenshotIntervalRef.current) {
+      clearInterval(screenshotIntervalRef.current);
+      screenshotIntervalRef.current = null;
+    }
+    if (screenshotUrl) {
+      URL.revokeObjectURL(screenshotUrl);
+      setScreenshotUrl(null);
+    }
   };
 
   // Stop inspection
-  const handleStopInspection = () => {
+  const handleStopInspection = async () => {
     setIsInspecting(false);
+    stopScreenshotPolling();
+
+    if (sessionId) {
+      try {
+        const { stopInspector } = await import("@/app/actions/startInspector");
+        await stopInspector(sessionId);
+      } catch (error) {
+        console.error("Error stopping inspector:", error);
+      }
+      setSessionId(null);
+    }
   };
 
   // Reset inspection
-  const handleReset = () => {
-    setIsInspecting(false);
+  const handleReset = async () => {
+    await handleStopInspection();
     setEvents([]);
     setSelectedEvents(new Set());
     setBrowserUrl("");
     startTime.current = null;
   };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopScreenshotPolling();
+      if (sessionId) {
+        import("@/app/actions/startInspector").then(({ stopInspector }) => {
+          stopInspector(sessionId).catch(console.error);
+        });
+      }
+    };
+  }, [sessionId]);
 
   // Simulate browser events (placeholder - akan diganti dengan real Playwright integration)
   const simulateBrowserEvents = () => {
@@ -312,23 +408,63 @@ export default function InspectorPage() {
             )}
           </div>
           <div className="flex-1 overflow-auto bg-white p-4">
-            {browserUrl ? (
+            {isLoading ? (
               <div className="h-full flex items-center justify-center bg-gray-100 rounded-lg border-2 border-dashed border-gray-300">
                 <div className="text-center">
-                  <Eye className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600 font-medium">Browser Preview</p>
+                  <RefreshCw className="w-16 h-16 text-gray-400 mx-auto mb-4 animate-spin" />
+                  <p className="text-gray-600 font-medium">Memuat halaman...</p>
                   <p className="text-sm text-gray-500 mt-2">
-                    {isInspecting
-                      ? "Mengamati interaksi dan perubahan halaman..."
-                      : "Browser akan muncul di sini saat inspection dimulai"}
+                    Membuka browser dan memuat {targetUrl}
                   </p>
-                  {browserUrl && (
-                    <p className="text-xs text-gray-400 mt-4 font-mono break-all px-4">
-                      {browserUrl}
-                    </p>
-                  )}
                 </div>
               </div>
+            ) : browserUrl ? (
+              screenshotUrl ? (
+                <div className="h-full flex flex-col items-center justify-center bg-gray-100 rounded-lg border-2 border-gray-300 overflow-hidden relative">
+                  <img
+                    src={screenshotUrl}
+                    alt="Browser Preview"
+                    className="max-w-full max-h-full object-contain"
+                    style={{ imageRendering: "auto" }}
+                  />
+                  {isInspecting && (
+                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm shadow-lg z-10">
+                      <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                      <span>Recording aktif</span>
+                    </div>
+                  )}
+                </div>
+              ) : isInspecting ? (
+                <div className="h-full flex flex-col items-center justify-center bg-gray-100 rounded-lg border-2 border-dashed border-gray-300">
+                  <div className="text-center">
+                    <RefreshCw className="w-16 h-16 text-gray-400 mx-auto mb-4 animate-spin" />
+                    <p className="text-gray-600 font-medium">Memuat preview...</p>
+                    <p className="text-sm text-gray-500 mt-2">
+                      Browser Playwright sudah terbuka. Preview akan muncul sebentar lagi.
+                    </p>
+                    {browserUrl && (
+                      <p className="text-xs text-gray-400 mt-4 font-mono break-all px-4">
+                        {browserUrl}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="h-full flex items-center justify-center bg-gray-100 rounded-lg border-2 border-dashed border-gray-300">
+                  <div className="text-center">
+                    <Eye className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 font-medium">Browser Preview</p>
+                    <p className="text-sm text-gray-500 mt-2">
+                      Browser akan muncul di sini saat inspection dimulai
+                    </p>
+                    {browserUrl && (
+                      <p className="text-xs text-gray-400 mt-4 font-mono break-all px-4">
+                        {browserUrl}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )
             ) : (
               <div className="h-full flex items-center justify-center">
                 <div className="text-center text-gray-400">
