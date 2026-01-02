@@ -4,7 +4,7 @@
 const createNewFieldMapping = (columns) => ({
   name: "",
   type: "text",
-  dataKey: columns[0] || "",
+  dataKey: (columns && columns.length > 0) ? columns[0] : "",
   required: false,
   labels: [""],
   fallbackLabels: [],
@@ -20,10 +20,10 @@ const updateFieldMappingAtIndex = (fieldMappings, idx, updates) => {
 export default function FieldMappingSection({
   fieldMappings,
   setFieldMappings,
-  columns,
+  columns = [],
 }) {
   const addFieldMapping = () => {
-    setFieldMappings([...fieldMappings, createNewFieldMapping(columns)]);
+    setFieldMappings([...fieldMappings, createNewFieldMapping(columns || [])]);
   };
 
   const updateFieldMapping = (idx, field, value) => {
@@ -153,7 +153,7 @@ export default function FieldMappingSection({
                       }
                       className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
-                      {columns.map((col) => (
+                      {(columns || []).map((col) => (
                         <option key={col} value={col}>
                           {col}
                         </option>

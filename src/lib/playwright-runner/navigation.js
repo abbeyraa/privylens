@@ -1,5 +1,6 @@
 import { findElementByTextOrSelector } from "./elementFinder";
 import { waitForIndicator } from "./indicators";
+import { waitForAllEvents } from "./waitHelpers";
 
 /**
  * Performs a sequence of navigation steps to reach the target page.
@@ -23,6 +24,9 @@ export async function performNavigation(page, navigationSteps) {
       }
       await element.click();
       
+      // === Wait for any post-click loading to complete ===
+      await waitForAllEvents(page, { timeout: 5000 });
+      
       // === Wait for indicator if specified ===
       if (step.waitFor) {
         await waitForIndicator(page, step.waitFor);
@@ -30,6 +34,9 @@ export async function performNavigation(page, navigationSteps) {
     } else if (step.type === "navigate") {
       // === Execute direct navigation step ===
       await page.goto(step.target, { waitUntil: "networkidle" });
+      
+      // === Wait for all loading events to complete ===
+      await waitForAllEvents(page, { timeout: 30000 });
     } else if (step.type === "wait") {
       // === Execute wait step ===
       await page.waitForTimeout((step.duration || 1) * 1000);

@@ -35,18 +35,52 @@ export async function findElementByLabel(page, labels, fallbackLabels, fieldType
     for (const strategy of strategies) {
       try {
         const element = page.locator(strategy).first();
-        if (await element.isVisible({ timeout: 1000 })) {
+        // === Check if element exists in DOM (attached) first ===
+        // This allows finding elements even if not visible in viewport
+        const isAttached = await element.isAttached({ timeout: 1000 }).catch(() => false);
+        if (!isAttached) continue;
+
+        // === Scroll element into view if not visible ===
+        try {
+          const isVisible = await element.isVisible({ timeout: 500 }).catch(() => false);
+          if (!isVisible) {
+            await element.scrollIntoViewIfNeeded({ timeout: 2000 });
+            await page.waitForTimeout(200);
+          }
+        } catch (e) {
+          // Continue even if scroll fails
+        }
+
+        // === Verify element is now accessible ===
+        const isNowVisible = await element.isVisible({ timeout: 1000 }).catch(() => false);
+        if (isNowVisible || isAttached) {
           // === If found via label selector, get associated input element ===
           if (strategy.startsWith("label:")) {
             const forAttr = await element.getAttribute("for");
             if (forAttr) {
-              return page.locator(`#${forAttr}`).first();
+              const inputElement = page.locator(`#${forAttr}`).first();
+              // Scroll input element into view too
+              try {
+                await inputElement.scrollIntoViewIfNeeded({ timeout: 2000 });
+                await page.waitForTimeout(200);
+              } catch (e) {
+                // Continue
+              }
+              return inputElement;
             }
             // === If no for attribute, find input in parent context ===
-            return element
+            const parentInput = element
               .locator("..")
               .locator("input, textarea, select")
               .first();
+            // Scroll parent input into view
+            try {
+              await parentInput.scrollIntoViewIfNeeded({ timeout: 2000 });
+              await page.waitForTimeout(200);
+            } catch (e) {
+              // Continue
+            }
+            return parentInput;
           }
           return element;
         }
@@ -60,8 +94,22 @@ export async function findElementByLabel(page, labels, fallbackLabels, fieldType
   for (const label of fallbackLabels) {
     if (!label) continue;
     const element = await findElementByTextOrSelector(page, label);
-    if (element && (await element.isVisible({ timeout: 1000 }))) {
-      return element;
+    if (element) {
+      // === Check if element exists in DOM ===
+      const isAttached = await element.isAttached({ timeout: 1000 }).catch(() => false);
+      if (isAttached) {
+        // === Scroll into view if not visible ===
+        try {
+          const isVisible = await element.isVisible({ timeout: 500 }).catch(() => false);
+          if (!isVisible) {
+            await element.scrollIntoViewIfNeeded({ timeout: 2000 });
+            await page.waitForTimeout(200);
+          }
+        } catch (e) {
+          // Continue
+        }
+        return element;
+      }
     }
   }
 

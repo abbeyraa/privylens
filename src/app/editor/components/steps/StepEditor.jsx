@@ -145,9 +145,11 @@ export default function StepEditor({
           <FieldMappingSection
             fieldMappings={fieldMappings}
             setFieldMappings={setFieldMappings}
-            rows={rows}
-            manualRows={manualRows}
-            manualColumns={manualColumns}
+            columns={
+              dataSourceType === "upload" && rows.length > 0
+                ? Object.keys(rows[0])
+                : manualColumns || []
+            }
           />
         );
 

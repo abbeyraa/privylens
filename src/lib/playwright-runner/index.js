@@ -12,6 +12,8 @@ import { performNavigation } from "./navigation";
 import { executeActionsForRow, executeActionsWithLoop } from "./actions";
 import { waitForPageReady, checkIndicator } from "./indicators";
 import { installDialogAutoAcceptIfNeeded } from "./dialog";
+import { setupAutoPermissions } from "./permissions";
+import { waitForPageLoad, waitForAllEvents } from "./waitHelpers";
 
 /**
  * Executes the automation plan using Playwright.
@@ -25,6 +27,10 @@ export async function executeAutomationPlan(plan, safeRun = false) {
   const browser = await chromium.launch({ headless: false });
   const context = await browser.newContext();
   const page = await context.newPage();
+
+  // === Setup automatic permission grants (geolocation, etc.) ===
+  // This ensures permission prompts don't block automation
+  setupAutoPermissions(context);
 
   const normalizedPlan = normalizePlan(plan);
   const results = [];
@@ -50,6 +56,12 @@ export async function executeAutomationPlan(plan, safeRun = false) {
 
     // === STEP 3: Navigate to the main target URL and await page readiness ===
     await page.goto(normalizedPlan.target.url, { waitUntil: "networkidle" });
+    
+    // === Wait for all loading events to complete ===
+    // This ensures page is fully loaded before proceeding
+    await waitForAllEvents(page, { timeout: 30000 });
+    
+    // === Wait for page ready indicator ===
     await waitForPageReady(page, normalizedPlan.target.pageReadyIndicator);
 
     // === STEP 4: Execute actions according to execution mode (batch or single) ===

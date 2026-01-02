@@ -20,9 +20,24 @@ export async function getClickableLocator(page, target) {
   // === Helper function to validate element is clickable ===
   const validateElement = async (locator) => {
     try {
-      // === Ensure element is visible ===
-      const isVisible = await locator.isVisible({ timeout: 2000 });
-      if (!isVisible) return false;
+      // === First check if element exists in DOM (attached) ===
+      // This allows reading from HTML even if not visible in viewport
+      const isAttached = await locator.isAttached({ timeout: 2000 }).catch(() => false);
+      if (!isAttached) return false;
+
+      // === Scroll element into view if not visible ===
+      // This ensures element is accessible even if below viewport
+      try {
+        const isVisible = await locator.isVisible({ timeout: 1000 }).catch(() => false);
+        if (!isVisible) {
+          // Element exists in DOM but not visible - scroll to it
+          await locator.scrollIntoViewIfNeeded({ timeout: 2000 });
+          // Wait a bit for scroll to complete
+          await page.waitForTimeout(200);
+        }
+      } catch (e) {
+        // If scroll fails, try to continue anyway
+      }
 
       // === Check if element is enabled (not disabled) ===
       const isEnabled = await locator

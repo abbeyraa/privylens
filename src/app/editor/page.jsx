@@ -27,7 +27,11 @@ import {
   saveExecutionLog,
 } from "@/lib/sessionStorage";
 import { getSetting } from "@/lib/settingsStorage";
-import { getTemplates, saveTemplates, migrateToFileStorage } from "@/lib/templateStorage";
+import {
+  getTemplates,
+  saveTemplates,
+  migrateToFileStorage,
+} from "@/lib/templateStorage";
 import StepCard from "./components/steps/StepCard";
 import StepEditor from "./components/steps/StepEditor";
 import AutomationPlanPreview from "./components/execution/AutomationPlanPreview";
@@ -87,12 +91,18 @@ const convertStateToSteps = (state) => {
         selectedSheet: state.selectedSheet || "",
         selectedRowIndex: state.selectedRowIndex || 0,
       },
-      summary: `${state.dataSourceType === "upload" ? "Upload" : "Manual"} data (${state.rows?.length || 0} rows)`,
+      summary: `${
+        state.dataSourceType === "upload" ? "Upload" : "Manual"
+      } data (${state.rows?.length || 0} rows)`,
       isValid: (state.rows?.length || 0) > 0,
       hasError: false,
     });
+  }
 
-    // Step 3: Field Mapping (if data source exists)
+  // Step 3: Field Mapping (linked to data source)
+  // Show field mapping step if data source exists
+  // Field mapping is automatically created when data source is added
+  if (state.hasDataSourceNode) {
     steps.push({
       id: "fieldMapping",
       type: "fieldMapping",
@@ -122,7 +132,9 @@ const convertStateToSteps = (state) => {
         value: node.data?.actionValue,
         waitFor: node.data?.actionWaitFor,
       },
-      summary: `${node.data?.actionType || "click"}: ${node.data?.actionTarget || "belum dikonfigurasi"}`,
+      summary: `${node.data?.actionType || "click"}: ${
+        node.data?.actionTarget || "belum dikonfigurasi"
+      }`,
       isValid: !!node.data?.actionTarget,
       hasError: !node.data?.actionTarget,
     });
@@ -173,88 +185,15 @@ const convertStateToSteps = (state) => {
         mode: state.execution.mode,
         loop: state.execution.loop,
       },
-      summary: `Loop execution (max ${state.execution.loop?.maxIterations || 50} iterations)`,
+      summary: `Loop execution (max ${
+        state.execution.loop?.maxIterations || 50
+      } iterations)`,
       isValid: true,
       hasError: false,
     });
   }
 
   return steps;
-};
-
-// Helper untuk convert steps ke state
-const convertStepsToState = (steps, currentState) => {
-  const state = { ...currentState };
-
-  steps.forEach((step) => {
-    if (step.type === "target") {
-      state.targetUrl = step.data.targetUrl || "";
-      state.requiresLogin = step.data.requiresLogin || false;
-      state.loginUrl = step.data.loginUrl || "";
-      state.loginUsername = step.data.loginUsername || "";
-      state.loginPassword = step.data.loginPassword || "";
-      state.navigationSteps = step.data.navigationSteps || [];
-      state.pageReadyType = step.data.pageReadyType || "selector";
-      state.pageReadyValue = step.data.pageReadyValue || "";
-    } else if (step.type === "dataSource") {
-      state.hasDataSourceNode = true;
-      state.dataSourceType = step.data.type || "upload";
-      state.rows = step.data.rows || [];
-      state.manualRows = step.data.manualRows || [{}];
-      state.manualColumns = step.data.manualColumns || ["field1"];
-      state.dataMode = step.data.mode || "single";
-      state.xlsxSheets = step.data.xlsxSheets || [];
-      state.selectedSheet = step.data.selectedSheet || "";
-      state.selectedRowIndex = step.data.selectedRowIndex || 0;
-    } else if (step.type === "fieldMapping") {
-      state.fieldMappings = step.data.mappings || [];
-    } else if (step.type === "action") {
-      // Convert actions back to nodes format
-      if (!state.actionNodes) state.actionNodes = [];
-      const existingIndex = state.actionNodes.findIndex(
-        (n) => n.id === step.id
-      );
-      const actionNode = {
-        id: step.id,
-        type: "action",
-        position: { x: 60, y: 200 + state.actionNodes.length * 100 },
-        data: {
-          actionType: step.actionType,
-          actionTarget: step.data.target || "",
-          actionValue: step.data.value,
-          actionWaitFor: step.data.waitFor,
-        },
-      };
-      if (existingIndex >= 0) {
-        state.actionNodes[existingIndex] = actionNode;
-      } else {
-        state.actionNodes.push(actionNode);
-      }
-    } else if (step.type === "successIndicator") {
-      state.successIndicator = {
-        type: step.data.type,
-        value: step.data.value,
-      };
-    } else if (step.type === "failureIndicator") {
-      state.failureIndicator = {
-        type: step.data.type,
-        value: step.data.value,
-      };
-    } else if (step.type === "execution") {
-      state.execution = {
-        mode: step.data.mode,
-        loop: step.data.loop,
-      };
-    }
-  });
-
-  // Remove data source if not in steps
-  if (!steps.some((s) => s.type === "dataSource")) {
-    state.hasDataSourceNode = false;
-    state.fieldMappings = [];
-  }
-
-  return state;
 };
 
 // Sortable Item Component
@@ -376,7 +315,7 @@ export default function EditorPage() {
   useEffect(() => {
     // Migrate on mount (only runs once)
     migrateToFileStorage();
-    
+
     const loadTemplate = async () => {
       const templateId = searchParams.get("templateId");
       if (templateId) {
@@ -386,14 +325,16 @@ export default function EditorPage() {
           setCurrentTemplateId(template.id);
           setTemplateName(template.name);
           setTemplateDescription(template.description || "");
-          
+
           // Load template plan
           const activeVersion = template.versions?.find((v) => v.isActive);
           if (activeVersion?.plan) {
             const plan = activeVersion.plan;
             if (plan.target) {
               setTargetUrl(plan.target.url || "");
-              setPageReadyType(plan.target.pageReadyIndicator?.type || "selector");
+              setPageReadyType(
+                plan.target.pageReadyIndicator?.type || "selector"
+              );
               setPageReadyValue(plan.target.pageReadyIndicator?.value || "");
               if (plan.target.login) {
                 setRequiresLogin(true);
@@ -442,14 +383,14 @@ export default function EditorPage() {
         }
       }
     };
-    
+
     loadTemplate();
   }, [searchParams]);
 
   // Load state on mount (only if no template loaded)
   useEffect(() => {
     if (currentTemplateId) return; // Skip if template is loaded
-    
+
     const savedState = loadEditorState();
     if (savedState) {
       setTargetUrl(savedState.targetUrl || "");
@@ -477,13 +418,13 @@ export default function EditorPage() {
       );
       setExecution(
         savedState.execution || {
-        mode: "once",
-        loop: {
-          maxIterations: 50,
-          delaySeconds: 0,
-          stopWhen: "notVisible",
-          indicator: { type: "selector", value: "" },
-        },
+          mode: "once",
+          loop: {
+            maxIterations: 50,
+            delaySeconds: 0,
+            stopWhen: "notVisible",
+            indicator: { type: "selector", value: "" },
+          },
         }
       );
 
@@ -515,28 +456,28 @@ export default function EditorPage() {
 
   useEffect(() => {
     const currentState = {
-        targetUrl,
-        requiresLogin,
-        loginUrl,
-        loginUsername,
-        loginPassword,
-        navigationSteps,
-        pageReadyType,
-        pageReadyValue,
+      targetUrl,
+      requiresLogin,
+      loginUrl,
+      loginUsername,
+      loginPassword,
+      navigationSteps,
+      pageReadyType,
+      pageReadyValue,
       hasDataSourceNode,
-        dataSourceType,
-        rows,
-        manualRows,
-        manualColumns,
-        dataMode,
-        xlsxSheets,
-        selectedSheet,
-        selectedRowIndex,
-        fieldMappings,
+      dataSourceType,
+      rows,
+      manualRows,
+      manualColumns,
+      dataMode,
+      xlsxSheets,
+      selectedSheet,
+      selectedRowIndex,
+      fieldMappings,
       actionNodes,
-        successIndicator,
-        failureIndicator,
-        execution,
+      successIndicator,
+      failureIndicator,
+      execution,
     };
     const newSteps = convertStateToSteps(currentState);
     setSteps(newSteps);
@@ -632,7 +573,7 @@ export default function EditorPage() {
   // Auto-save template if autosave is enabled and template exists
   useEffect(() => {
     if (!currentTemplateId) return;
-    
+
     const autoSaveEnabled = getSetting("autoSave");
     if (!autoSaveEnabled) return;
 
@@ -653,7 +594,9 @@ export default function EditorPage() {
       const activeVersion = template.versions.find((v) => v.isActive);
       if (activeVersion) {
         activeVersion.plan = plan;
-        activeVersion.notes = `Auto-saved at ${new Date().toLocaleString("id-ID")}`;
+        activeVersion.notes = `Auto-saved at ${new Date().toLocaleString(
+          "id-ID"
+        )}`;
       }
 
       // Update metadata
@@ -667,7 +610,7 @@ export default function EditorPage() {
         t.id === currentTemplateId ? template : t
       );
       await saveTemplates(updated).catch((error) => {
-        console.error('Auto-save failed:', error);
+        console.error("Auto-save failed:", error);
       });
     }, 2000); // Debounce 2 seconds
 
@@ -732,23 +675,24 @@ export default function EditorPage() {
         // Update action nodes positions based on new order
         const actionSteps = newSteps.filter((s) => s.type === "action");
         setActionNodes((prev) => {
-          return actionSteps.map((step, index) => {
-            const existing = prev.find((a) => a.id === step.id);
-            if (existing) {
-              return {
-                ...existing,
-                position: { x: 60, y: 200 + index * 100 },
-              };
-            }
-            return existing;
-          }).filter(Boolean);
+          return actionSteps
+            .map((step, index) => {
+              const existing = prev.find((a) => a.id === step.id);
+              if (existing) {
+                return {
+                  ...existing,
+                  position: { x: 60, y: 200 + index * 100 },
+                };
+              }
+              return existing;
+            })
+            .filter(Boolean);
         });
 
         return newSteps;
       });
     }
   };
-
 
   // Step handlers
   const toggleStepExpansion = (stepId) => {
@@ -767,13 +711,17 @@ export default function EditorPage() {
     if (!step || step.deletable === false) return;
 
     if (step.type === "dataSource") {
-      // Remove data source and field mapping
+      // Remove data source and field mapping together
       setRows([]);
-      setManualRows([{}]);
+      setManualRows([]); // Empty array to ensure hasDataSourceNode becomes false
       setManualColumns(["field1"]);
-      setFieldMappings([]);
+      setFieldMappings([]); // Also remove field mappings when data source is deleted
     } else if (step.type === "fieldMapping") {
+      // Remove field mapping and data source together
       setFieldMappings([]);
+      setRows([]);
+      setManualRows([]);
+      setManualColumns(["field1"]);
     } else if (step.type === "action") {
       setActionNodes((prev) => prev.filter((a) => a.id !== stepId));
     } else if (step.type === "successIndicator") {
@@ -793,19 +741,16 @@ export default function EditorPage() {
     }
   };
 
-  const handleToggleDisableStep = (stepId) => {
-    // For now, we'll just mark it visually
-    // In future, we can add disabled state to steps
-  };
-
   const handleAddStep = (stepType) => {
     if (stepType === "dataSource") {
       // Add data source step - set initial data
+      // Field mapping step will automatically appear when data source is added
       setDataSourceType("upload");
       setRows([]);
       setManualRows([{}]);
       setManualColumns(["field1"]);
       setDataMode("single");
+      // Initialize with empty field mappings - field mapping step will appear automatically
       setFieldMappings([]);
     } else if (stepType === "action") {
       const newAction = {
@@ -900,7 +845,9 @@ export default function EditorPage() {
           ...(node.data.actionValue !== undefined
             ? { value: node.data.actionValue }
             : {}),
-          ...(node.data.actionWaitFor ? { waitFor: node.data.actionWaitFor } : {}),
+          ...(node.data.actionWaitFor
+            ? { waitFor: node.data.actionWaitFor }
+            : {}),
         })),
       ...(successIndicator.value.trim()
         ? {
@@ -926,7 +873,7 @@ export default function EditorPage() {
   // Save template
   const handleSaveTemplate = async (templateData) => {
     const plan = generateAutomationPlan();
-    
+
     // Validasi minimal
     if (!plan.target?.url) {
       alert("Target URL harus diisi sebelum menyimpan template");
@@ -934,8 +881,10 @@ export default function EditorPage() {
     }
 
     const templates = await getTemplates();
-    
-    const templateId = currentTemplateId || `template-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    const templateId =
+      currentTemplateId ||
+      `template-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const name = templateData.name || templateName || "Untitled Template";
     const description = templateData.description || templateDescription || "";
 
@@ -1051,7 +1000,7 @@ export default function EditorPage() {
       plan = generateAutomationPlan();
       const report = await runAutomation(plan, safeRun);
       setExecutionReport(report);
-      
+
       if (plan) {
         saveExecutionLog(report, plan);
       }
@@ -1063,7 +1012,7 @@ export default function EditorPage() {
         safeRun,
       };
       setExecutionReport(errorReport);
-      
+
       if (plan) {
         saveExecutionLog(errorReport, plan);
       } else {
@@ -1094,58 +1043,58 @@ export default function EditorPage() {
               </button>
             )}
             <div className="flex-1">
-            {isEditingName ? (
-              <input
-                type="text"
-                value={templateName}
-                onChange={(e) => setTemplateName(e.target.value)}
-                onBlur={() => setIsEditingName(false)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    setIsEditingName(false);
-                  }
-                  if (e.key === "Escape") {
-                    setIsEditingName(false);
-                  }
-                }}
-                className="text-xl font-bold text-gray-900 bg-transparent border-b-2 border-blue-500 focus:outline-none w-full"
-                autoFocus
-              />
-            ) : (
-              <h1
-                className="text-xl font-bold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
-                onClick={() => setIsEditingName(true)}
-                title="Klik untuk mengedit nama template"
-              >
-                {templateName}
-              </h1>
-            )}
-            {isEditingDescription ? (
-              <input
-                type="text"
-                value={templateDescription}
-                onChange={(e) => setTemplateDescription(e.target.value)}
-                onBlur={() => setIsEditingDescription(false)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    setIsEditingDescription(false);
-                  }
-                  if (e.key === "Escape") {
-                    setIsEditingDescription(false);
-                  }
-                }}
-                className="text-sm text-gray-600 mt-1 bg-transparent border-b-2 border-blue-500 focus:outline-none w-full"
-                autoFocus
-              />
-            ) : (
-              <p
-                className="text-sm text-gray-600 mt-1 cursor-pointer hover:text-blue-600 transition-colors"
-                onClick={() => setIsEditingDescription(true)}
-                title="Klik untuk mengedit deskripsi template"
-              >
-                {templateDescription || "Klik untuk menambahkan deskripsi"}
-              </p>
-            )}
+              {isEditingName ? (
+                <input
+                  type="text"
+                  value={templateName}
+                  onChange={(e) => setTemplateName(e.target.value)}
+                  onBlur={() => setIsEditingName(false)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      setIsEditingName(false);
+                    }
+                    if (e.key === "Escape") {
+                      setIsEditingName(false);
+                    }
+                  }}
+                  className="text-xl font-bold text-gray-900 bg-transparent border-b-2 border-blue-500 focus:outline-none w-full"
+                  autoFocus
+                />
+              ) : (
+                <h1
+                  className="text-xl font-bold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
+                  onClick={() => setIsEditingName(true)}
+                  title="Klik untuk mengedit nama template"
+                >
+                  {templateName}
+                </h1>
+              )}
+              {isEditingDescription ? (
+                <input
+                  type="text"
+                  value={templateDescription}
+                  onChange={(e) => setTemplateDescription(e.target.value)}
+                  onBlur={() => setIsEditingDescription(false)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      setIsEditingDescription(false);
+                    }
+                    if (e.key === "Escape") {
+                      setIsEditingDescription(false);
+                    }
+                  }}
+                  className="text-sm text-gray-600 mt-1 bg-transparent border-b-2 border-blue-500 focus:outline-none w-full"
+                  autoFocus
+                />
+              ) : (
+                <p
+                  className="text-sm text-gray-600 mt-1 cursor-pointer hover:text-blue-600 transition-colors"
+                  onClick={() => setIsEditingDescription(true)}
+                  title="Klik untuk mengedit deskripsi template"
+                >
+                  {templateDescription || "Klik untuk menambahkan deskripsi"}
+                </p>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -1166,7 +1115,9 @@ export default function EditorPage() {
               Simpan Template
             </button>
             <button
-              onClick={() => setActivePanel(activePanel === "list" ? "preview" : "list")}
+              onClick={() =>
+                setActivePanel(activePanel === "list" ? "preview" : "list")
+              }
               className="px-4 py-2 border border-[#e5e5e5] rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium flex items-center gap-2"
             >
               <Eye className="w-4 h-4" />
@@ -1204,7 +1155,8 @@ export default function EditorPage() {
                     {steps.length === 0 ? (
                       <div className="text-center py-12">
                         <p className="text-gray-500 mb-4">
-                          Belum ada langkah. Mulai dengan mengkonfigurasi Target.
+                          Belum ada langkah. Mulai dengan mengkonfigurasi
+                          Target.
                         </p>
                       </div>
                     ) : (
@@ -1218,7 +1170,9 @@ export default function EditorPage() {
                           onEdit={() => handleEditStep(step)}
                           onDelete={() => handleDeleteStep(step.id)}
                           onToggle={() => toggleStepExpansion(step.id)}
-                          onToggleDisable={() => handleToggleDisableStep(step.id)}
+                          onToggleDisable={() =>
+                            handleToggleDisableStep(step.id)
+                          }
                         />
                       ))
                     )}
@@ -1238,15 +1192,15 @@ export default function EditorPage() {
                             Data Source
                           </button>
                         )}
-                <button
+                        <button
                           onClick={() => handleAddStep("action")}
                           className="px-4 py-3 border border-[#e5e5e5] rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium flex items-center gap-2"
                         >
                           <Plus className="w-4 h-4" />
                           Action
-                </button>
+                        </button>
                         {!steps.some((s) => s.type === "successIndicator") && (
-                <button
+                          <button
                             onClick={() => handleAddStep("successIndicator")}
                             className="px-4 py-3 border border-[#e5e5e5] rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium flex items-center gap-2"
                           >
@@ -1272,9 +1226,9 @@ export default function EditorPage() {
                             Execution Settings
                           </button>
                         )}
+                      </div>
                     </div>
                   </div>
-              </div>
                 </SortableContext>
                 <DragOverlay>
                   {activeId && (
@@ -1295,7 +1249,7 @@ export default function EditorPage() {
                   )}
                 </DragOverlay>
               </DndContext>
-        </div>
+            </div>
 
             {/* Step Editor Sidebar */}
             {selectedStep && (
@@ -1361,13 +1315,14 @@ export default function EditorPage() {
               ) : (
                 <AutomationPlanPreview
                   plan={generateAutomationPlan()}
+                  effectiveRows={effectiveRows}
                   isExecuting={isExecuting}
                 />
-            )}
+              )}
+            </div>
           </div>
-        </div>
-      )}
-        </div>
+        )}
+      </div>
 
       {/* Save Template Dialog */}
       <SaveTemplateDialog
@@ -1379,4 +1334,4 @@ export default function EditorPage() {
     </div>
   );
 }
-
+  

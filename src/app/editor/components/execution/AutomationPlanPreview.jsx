@@ -24,7 +24,7 @@ const getDataModeLabel = (mode) =>
 const getStopWhenLabel = (stopWhen) =>
   stopWhen === "visible" ? "Terlihat/Ada" : "Hilang/Tidak ada";
 
-export default function AutomationPlanPreview({ plan, effectiveRows }) {
+export default function AutomationPlanPreview({ plan, effectiveRows = [] }) {
   if (!plan || !plan.target?.url) {
     return (
       <div className="bg-white rounded-lg shadow-md p-4">
@@ -75,11 +75,11 @@ export default function AutomationPlanPreview({ plan, effectiveRows }) {
               label="Mode"
               value={getDataModeLabel(plan.dataSource.mode)}
             />
-            <InfoRow label="Total Baris" value={effectiveRows.length} />
+            <InfoRow label="Total Baris" value={(effectiveRows || []).length} />
             {plan.dataSource.mode === "single" && (
               <InfoRow
                 label="Baris Terpilih"
-                value={plan.dataSource.selectedRowIndex + 1}
+                value={(plan.dataSource.selectedRowIndex || 0) + 1}
               />
             )}
           </SectionPreview>

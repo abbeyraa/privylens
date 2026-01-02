@@ -5,6 +5,7 @@ import { waitForIndicator, checkIndicator } from "./indicators";
 import { waitForPageReady } from "./indicators";
 import { installDialogAutoAcceptIfNeeded } from "./dialog";
 import { createFailureMetadata } from "../failureIntelligence";
+import { waitForElementReady, waitForAllEvents } from "./waitHelpers";
 
 /**
  * Executes a single automation action based on its type.
@@ -37,6 +38,9 @@ export async function executeAction(page, action, plan, rowData, safeRun = false
             ? action.value
             : rowData[fieldMapping.dataKey] || "";
 
+        // === Wait for page to be fully loaded before finding element ===
+        await waitForAllEvents(page, { timeout: 10000 });
+
         // === Locate element using label-based search ===
         const element = await findElementByLabel(
           page,
@@ -61,6 +65,23 @@ export async function executeAction(page, action, plan, rowData, safeRun = false
             elementType: fieldMapping.type,
           });
           throw error;
+        }
+
+        // === Ensure element is scrolled into view before filling ===
+        // This handles cases where element is below viewport or hidden
+        try {
+          const isVisible = await element.isVisible({ timeout: 1000 }).catch(() => false);
+          if (!isVisible) {
+            // Element exists in DOM but not visible - scroll to it
+            await element.scrollIntoViewIfNeeded({ timeout: 3000 });
+            // Wait for scroll to complete and element to be ready
+            await page.waitForTimeout(300);
+            // Verify element is now visible
+            await element.waitFor({ state: "visible", timeout: 3000 });
+          }
+        } catch (e) {
+          // If scroll/visibility check fails, try to continue anyway
+          // Element might still be fillable even if not fully visible
         }
 
         // === Fill element based on field type ===
@@ -104,8 +125,15 @@ export async function executeAction(page, action, plan, rowData, safeRun = false
           }
         }
         
+        // === Wait for page to be fully loaded before clicking ===
+        await waitForAllEvents(page, { timeout: 10000 });
+        
         // === Execute click action on target element ===
         await clickByTextOrSelector(page, action.target);
+        
+        // === Wait for any post-click loading to complete ===
+        await waitForAllEvents(page, { timeout: 5000 });
+        
         return { type: action.type, target: action.target, success: true };
       }
 
@@ -132,8 +160,16 @@ export async function executeAction(page, action, plan, rowData, safeRun = false
         } else {
           // === Navigate back to initial target URL ===
           await page.goto(plan.target.url, { waitUntil: "networkidle" });
+        }
+        
+        // === Wait for all loading events to complete ===
+        await waitForAllEvents(page, { timeout: 30000 });
+        
+        // === Wait for page ready indicator ===
+        if (!action.target || action.target === plan.target.url) {
           await waitForPageReady(page, plan.target.pageReadyIndicator);
         }
+        
         return {
           type: action.type,
           target: action.target || plan.target.url,
@@ -194,6 +230,11 @@ export async function executeActionsForRow(
     const currentUrl = page.url();
     if (!currentUrl.includes(new URL(targetUrl).pathname)) {
       await page.goto(targetUrl, { waitUntil: "networkidle" });
+      
+      // === Wait for all loading events to complete ===
+      await waitForAllEvents(page, { timeout: 30000 });
+      
+      // === Wait for page ready indicator ===
       await waitForPageReady(page, plan.target.pageReadyIndicator);
     }
 
