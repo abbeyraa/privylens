@@ -2,10 +2,12 @@
 
 import { Settings as SettingsIcon, Database } from "lucide-react";
 import { useState } from "react";
-import { getSettings, saveSettings } from "@/lib/settingsStorage";
 
 export default function SettingsPage() {
-  const [settings, setSettings] = useState(() => getSettings());
+  const [settings, setSettings] = useState({
+    autoSave: true,
+    language: "id",
+  });
 
   const handleToggle = (key) => {
     const newSettings = {
@@ -13,7 +15,6 @@ export default function SettingsPage() {
       [key]: !settings[key],
     };
     setSettings(newSettings);
-    saveSettings(newSettings);
   };
 
   const handleChange = (key, value) => {
@@ -22,7 +23,6 @@ export default function SettingsPage() {
       [key]: value,
     };
     setSettings(newSettings);
-    saveSettings(newSettings);
   };
 
   const settingSections = [
