@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, FilePlus, PlayCircle, FileText, GripVertical } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  FilePlus,
+  PlayCircle,
+  FileText,
+  GripVertical,
+  Trash2,
+} from "lucide-react";
 
 const initialAccessSteps = [
   {
@@ -262,13 +270,14 @@ export default function EditorPage() {
                           </span>
                           <button
                             type="button"
+                            aria-label="Delete step"
                             onClick={(event) => {
                               event.stopPropagation();
                               handleDeleteStep("access", step.id);
                             }}
-                            className="text-xs font-medium text-red-600 hover:text-red-700"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-red-600 hover:text-red-700 hover:bg-red-50"
                           >
-                            Delete
+                            <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
                       </div>
@@ -360,13 +369,14 @@ export default function EditorPage() {
                           </span>
                           <button
                             type="button"
+                            aria-label="Delete step"
                             onClick={(event) => {
                               event.stopPropagation();
                               handleDeleteStep("post", step.id);
                             }}
-                            className="text-xs font-medium text-red-600 hover:text-red-700"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-red-600 hover:text-red-700 hover:bg-red-50"
                           >
-                            Delete
+                            <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
                       </div>
