@@ -70,6 +70,7 @@ export default function EditorPage() {
   const [loginRequired, setLoginRequired] = useState("Ya");
   const [loginUsername, setLoginUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+  const [hasInspected, setHasInspected] = useState(false);
 
   const selectedStepData =
     selectedStep.group === "access"
@@ -174,6 +175,24 @@ export default function EditorPage() {
             >
               <FileText className="w-4 h-4" />
               Simpan Draft
+            </button>
+            <button
+              type="button"
+              onClick={() => setHasInspected(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#e5e5e5] rounded-lg bg-white text-gray-700 hover:bg-gray-50"
+            >
+              Inspect
+            </button>
+            <button
+              type="button"
+              disabled={!hasInspected}
+              className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#e5e5e5] rounded-lg ${
+                hasInspected
+                  ? "bg-white text-gray-700 hover:bg-gray-50"
+                  : "bg-gray-100 text-gray-400 cursor-not-allowed"
+              }`}
+            >
+              Logs
             </button>
             <button
               type="button"
