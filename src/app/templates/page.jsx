@@ -27,26 +27,23 @@ import {
 
 export default function TemplatesPage() {
   const router = useRouter();
-  const loadTemplatesFromLocalStorage = () => {
-    if (typeof window === "undefined") return [];
-    try {
-      const stored = localStorage.getItem("otomate_templates");
-      return stored ? JSON.parse(stored) : [];
-    } catch (error) {
-      console.error("Failed to load templates from localStorage:", error);
-      return [];
-    }
-  };
-
-  const [templates, setTemplates] = useState(() =>
-    loadTemplatesFromLocalStorage()
-  );
+  const [templates, setTemplates] = useState([]);
   const [activeSection, setActiveSection] = useState("history"); // history, metadata
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedTemplates, setExpandedTemplates] = useState({});
 
   useEffect(() => {
     migrateToFileStorage();
+  }, []);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("otomate_templates");
+      setTemplates(stored ? JSON.parse(stored) : []);
+    } catch (error) {
+      console.error("Failed to load templates from localStorage:", error);
+      setTemplates([]);
+    }
   }, []);
 
   const filteredTemplates = templates.filter(

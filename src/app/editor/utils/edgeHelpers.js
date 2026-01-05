@@ -1,9 +1,5 @@
 import { NODE_IDS } from "./nodeHelpers";
-import {
-  findNodeById,
-  getActionNodes,
-  sortNodesByY,
-} from "./nodeHelpers";
+import { findNodeById, getActionNodes, sortNodesByY } from "./nodeHelpers";
 
 // Helper untuk membuat edge
 export const createEdge = (source, target, animated = true) => ({
@@ -98,7 +94,10 @@ export const reconnectEdgesAfterNodeDeletion = (
 
 // Helper untuk reconnect edges setelah data/mapping dihapus
 export const reconnectEdgesAfterDataSourceDeletion = (prevEdges, nodes) => {
-  const newEdges = filterEdgesByNodes(prevEdges, [NODE_IDS.DATA, NODE_IDS.MAPPING]);
+  const newEdges = filterEdgesByNodes(prevEdges, [
+    NODE_IDS.DATA,
+    NODE_IDS.MAPPING,
+  ]);
   const actionNodes = getActionNodes(nodes);
 
   if (actionNodes.length > 0) {
