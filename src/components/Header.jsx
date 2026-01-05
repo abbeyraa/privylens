@@ -17,7 +17,7 @@ const menuItems = [
     icon: FilePlus,
   },
   {
-    name: "Saved Templates",
+    name: "Template",
     href: "/templates",
     icon: FolderOpen,
   },

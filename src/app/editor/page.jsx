@@ -1,4 +1,11 @@
-import { FilePlus, PlayCircle, FileText, Settings, Search, Code } from "lucide-react";
+import {
+  FilePlus,
+  PlayCircle,
+  FileText,
+  Settings,
+  Search,
+  Code,
+} from "lucide-react";
 
 const steps = [
   {
