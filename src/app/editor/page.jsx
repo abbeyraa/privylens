@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { FilePlus, PlayCircle, FileText, GripVertical } from "lucide-react";
+import { ChevronDown, ChevronRight, FilePlus, PlayCircle, FileText, GripVertical } from "lucide-react";
 
-const initialSteps = [
+const initialAccessSteps = [
   {
     title: "Buka Halaman Login",
     description: "Arahkan browser ke https://contoh.app/login",
@@ -25,6 +25,9 @@ const initialSteps = [
     selector: "#submit",
     value: "",
   },
+];
+
+const initialPostLoginSteps = [
   {
     title: "Validasi Hasil",
     description: "Pastikan dashboard muncul tanpa error",
@@ -35,62 +38,105 @@ const initialSteps = [
 ];
 
 export default function EditorPage() {
-  const [steps, setSteps] = useState(() =>
-    initialSteps.map((step, index) => ({
-      id: `step-${index + 1}`,
+  const [accessSteps, setAccessSteps] = useState(() =>
+    initialAccessSteps.map((step, index) => ({
+      id: `access-step-${index + 1}`,
       ...step,
     }))
   );
-  const [selectedStepId, setSelectedStepId] = useState("step-1");
+  const [postLoginSteps, setPostLoginSteps] = useState(() =>
+    initialPostLoginSteps.map((step, index) => ({
+      id: `post-step-${index + 1}`,
+      ...step,
+    }))
+  );
+  const [selectedStep, setSelectedStep] = useState({
+    group: "access",
+    id: "access-step-1",
+  });
   const [draggedStepId, setDraggedStepId] = useState(null);
+  const [draggedGroup, setDraggedGroup] = useState(null);
+  const [isAccessOpen, setIsAccessOpen] = useState(true);
+  const [isPostLoginOpen, setIsPostLoginOpen] = useState(true);
   const [targetUrl, setTargetUrl] = useState("");
   const [loginRequired, setLoginRequired] = useState("Ya");
   const [loginUsername, setLoginUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
 
-  const selectedStep = steps.find((step) => step.id === selectedStepId);
+  const selectedStepData =
+    selectedStep.group === "access"
+      ? accessSteps.find((step) => step.id === selectedStep.id)
+      : postLoginSteps.find((step) => step.id === selectedStep.id);
 
-  const handleAddStep = () => {
+  const handleAddStep = (group) => {
     const newStep = {
-      id: `step-${Date.now()}`,
+      id: `${group}-step-${Date.now()}`,
       title: "Step Baru",
       description: "Isi detail langkah ini",
       type: "Form Input",
       selector: "",
       value: "",
     };
-    setSteps((prev) => [...prev, newStep]);
-    setSelectedStepId(newStep.id);
+    if (group === "access") {
+      setAccessSteps((prev) => [...prev, newStep]);
+    } else {
+      setPostLoginSteps((prev) => [...prev, newStep]);
+    }
+    setSelectedStep({ group, id: newStep.id });
   };
 
-  const handleStepChange = (id, key, value) => {
-    setSteps((prev) =>
-      prev.map((step) => (step.id === id ? { ...step, [key]: value } : step))
-    );
+  const handleStepChange = (group, id, key, value) => {
+    const update = (steps) =>
+      steps.map((step) => (step.id === id ? { ...step, [key]: value } : step));
+    if (group === "access") {
+      setAccessSteps((prev) => update(prev));
+    } else {
+      setPostLoginSteps((prev) => update(prev));
+    }
   };
 
-  const handleDeleteStep = (id) => {
-    setSteps((prev) => {
-      const next = prev.filter((step) => step.id !== id);
-      if (selectedStepId === id) {
-        setSelectedStepId(next[0]?.id || null);
-      }
-      return next;
-    });
+  const handleDeleteStep = (group, id) => {
+    const update = (steps) => steps.filter((step) => step.id !== id);
+    if (group === "access") {
+      setAccessSteps((prev) => {
+        const next = update(prev);
+        if (selectedStep.group === group && selectedStep.id === id) {
+          setSelectedStep({
+            group,
+            id: next[0]?.id || null,
+          });
+        }
+        return next;
+      });
+    } else {
+      setPostLoginSteps((prev) => {
+        const next = update(prev);
+        if (selectedStep.group === group && selectedStep.id === id) {
+          setSelectedStep({
+            group,
+            id: next[0]?.id || null,
+          });
+        }
+        return next;
+      });
+    }
   };
 
-  const handleDragStart = (event, id) => {
+  const handleDragStart = (event, group, id) => {
     setDraggedStepId(id);
+    setDraggedGroup(group);
     event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", id);
+    event.dataTransfer.setData("text/plain", `${group}:${id}`);
   };
 
-  const handleDrop = (event, targetId) => {
+  const handleDrop = (event, targetGroup, targetId) => {
     event.preventDefault();
-    const draggedId = event.dataTransfer.getData("text/plain");
+    const payload = event.dataTransfer.getData("text/plain");
+    const [dragGroup, draggedId] = payload.split(":");
     if (!draggedId || draggedId === targetId) return;
+    if (dragGroup !== targetGroup) return;
 
-    setSteps((prev) => {
+    const reorder = (prev) => {
       const draggedIndex = prev.findIndex((step) => step.id === draggedId);
       const targetIndex = prev.findIndex((step) => step.id === targetId);
       if (draggedIndex === -1 || targetIndex === -1) return prev;
@@ -99,7 +145,13 @@ export default function EditorPage() {
       const [moved] = next.splice(draggedIndex, 1);
       next.splice(targetIndex, 0, moved);
       return next;
-    });
+    };
+
+    if (targetGroup === "access") {
+      setAccessSteps((prev) => reorder(prev));
+    } else {
+      setPostLoginSteps((prev) => reorder(prev));
+    }
   };
 
   return (
@@ -131,91 +183,206 @@ export default function EditorPage() {
                     Flow Steps
                   </h2>
                   <p className="text-xs text-gray-500 mt-1">
-                    Atur urutan langkah dengan nomor
+                    Kelola langkah sebelum dan sesudah login
                   </p>
                 </div>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100"
-                  onClick={handleAddStep}
-                >
-                  <FilePlus className="w-4 h-4" />
-                  Tambah
-                </button>
               </div>
               <div className="divide-y divide-[#e5e5e5]">
-                <div className="px-6 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-gray-400 bg-gray-50">
-                  Permanent
-                </div>
-                <div className="px-6 py-4 bg-gray-50">
-                  <div className="flex items-start gap-4">
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-gray-900">
-                        Target URL & Login
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Langkah tetap untuk menentukan target dan autentikasi
-                      </p>
-                    </div>
-                    <span className="text-[11px] px-2 py-1 rounded-full bg-gray-200 text-gray-600">
-                      Fixed
-                    </span>
-                  </div>
-                </div>
-                <div className="px-6 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-                  Steps
-                </div>
-                {steps.map((step) => (
-                  <div
-                    key={step.id}
-                    onClick={() => setSelectedStepId(step.id)}
-                    onDragStart={(event) => handleDragStart(event, step.id)}
-                    onDragOver={(event) => event.preventDefault()}
-                    onDrop={(event) => handleDrop(event, step.id)}
-                    onDragEnd={() => setDraggedStepId(null)}
-                    draggable
-                    role="button"
-                    tabIndex={0}
-                    className={`w-full text-left px-6 py-4 transition-colors cursor-pointer ${
-                      selectedStepId === step.id
-                        ? "bg-blue-50"
-                        : "hover:bg-gray-50"
-                    }`}
+                <div className="px-6 py-4 bg-gray-50 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setIsAccessOpen((prev) => !prev)}
+                    className="text-sm font-semibold text-gray-900"
                   >
-                    <div className="flex items-start gap-4">
-                      <span
-                        className={`mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-md border ${
-                          draggedStepId === step.id
-                            ? "border-blue-200 bg-blue-100 text-blue-700"
-                            : "border-[#e5e5e5] bg-white text-gray-400"
+                    Access
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsAccessOpen((prev) => !prev)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    {isAccessOpen ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                {isAccessOpen && (
+                  <>
+                    <div className="px-6 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                      Steps hingga login
+                    </div>
+                    {accessSteps.map((step) => (
+                      <div
+                        key={step.id}
+                        onClick={() =>
+                          setSelectedStep({ group: "access", id: step.id })
+                        }
+                        onDragStart={(event) =>
+                          handleDragStart(event, "access", step.id)
+                        }
+                        onDragOver={(event) => event.preventDefault()}
+                        onDrop={(event) => handleDrop(event, "access", step.id)}
+                        onDragEnd={() => {
+                          setDraggedStepId(null);
+                          setDraggedGroup(null);
+                        }}
+                        draggable
+                        role="button"
+                        tabIndex={0}
+                        className={`w-full text-left px-6 py-4 transition-colors cursor-pointer ${
+                          selectedStep.group === "access" &&
+                          selectedStep.id === step.id
+                            ? "bg-blue-50"
+                            : "hover:bg-gray-50"
                         }`}
                       >
-                        <GripVertical className="h-4 w-4" />
-                      </span>
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-gray-900">
-                          {step.title}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {step.description}
-                        </p>
+                        <div className="flex items-start gap-4">
+                          <span
+                            className={`mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-md border ${
+                              draggedStepId === step.id &&
+                              draggedGroup === "access"
+                                ? "border-blue-200 bg-blue-100 text-blue-700"
+                                : "border-[#e5e5e5] bg-white text-gray-400"
+                            }`}
+                          >
+                            <GripVertical className="h-4 w-4" />
+                          </span>
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-gray-900">
+                              {step.title}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {step.description}
+                            </p>
+                          </div>
+                          <span className="text-[11px] px-2 py-1 rounded-full bg-gray-100 text-gray-600">
+                            {step.type}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleDeleteStep("access", step.id);
+                            }}
+                            className="text-xs font-medium text-red-600 hover:text-red-700"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
-                      <span className="text-[11px] px-2 py-1 rounded-full bg-gray-100 text-gray-600">
-                        {step.type}
-                      </span>
+                    ))}
+                    <div className="px-6 py-4">
                       <button
                         type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          handleDeleteStep(step.id);
-                        }}
-                        className="text-xs font-medium text-red-600 hover:text-red-700"
+                        className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100"
+                        onClick={() => handleAddStep("access")}
                       >
-                        Delete
+                        <FilePlus className="w-4 h-4" />
+                        Tambah Step
                       </button>
                     </div>
-                  </div>
-                ))}
+                  </>
+                )}
+
+                <div className="px-6 py-4 bg-gray-50 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setIsPostLoginOpen((prev) => !prev)}
+                    className="text-sm font-semibold text-gray-900"
+                  >
+                    Setelah Login
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsPostLoginOpen((prev) => !prev)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    {isPostLoginOpen ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                {isPostLoginOpen && (
+                  <>
+                    <div className="px-6 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                      Apa yang dilakukan setelah login
+                    </div>
+                    {postLoginSteps.map((step) => (
+                      <div
+                        key={step.id}
+                        onClick={() =>
+                          setSelectedStep({ group: "post", id: step.id })
+                        }
+                        onDragStart={(event) =>
+                          handleDragStart(event, "post", step.id)
+                        }
+                        onDragOver={(event) => event.preventDefault()}
+                        onDrop={(event) => handleDrop(event, "post", step.id)}
+                        onDragEnd={() => {
+                          setDraggedStepId(null);
+                          setDraggedGroup(null);
+                        }}
+                        draggable
+                        role="button"
+                        tabIndex={0}
+                        className={`w-full text-left px-6 py-4 transition-colors cursor-pointer ${
+                          selectedStep.group === "post" &&
+                          selectedStep.id === step.id
+                            ? "bg-blue-50"
+                            : "hover:bg-gray-50"
+                        }`}
+                      >
+                        <div className="flex items-start gap-4">
+                          <span
+                            className={`mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-md border ${
+                              draggedStepId === step.id &&
+                              draggedGroup === "post"
+                                ? "border-blue-200 bg-blue-100 text-blue-700"
+                                : "border-[#e5e5e5] bg-white text-gray-400"
+                            }`}
+                          >
+                            <GripVertical className="h-4 w-4" />
+                          </span>
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-gray-900">
+                              {step.title}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {step.description}
+                            </p>
+                          </div>
+                          <span className="text-[11px] px-2 py-1 rounded-full bg-gray-100 text-gray-600">
+                            {step.type}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleDeleteStep("post", step.id);
+                            }}
+                            className="text-xs font-medium text-red-600 hover:text-red-700"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="px-6 py-4">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100"
+                        onClick={() => handleAddStep("post")}
+                      >
+                        <FilePlus className="w-4 h-4" />
+                        Tambah Step
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </section>
 
@@ -301,15 +468,16 @@ export default function EditorPage() {
                     <input
                       type="text"
                       placeholder="Isi Kredensial"
-                      value={selectedStep?.title || ""}
+                      value={selectedStepData?.title || ""}
                       onChange={(event) =>
                         handleStepChange(
-                          selectedStepId,
+                          selectedStep.group,
+                          selectedStep.id,
                           "title",
                           event.target.value
                         )
                       }
-                      disabled={!selectedStep}
+                      disabled={!selectedStepData}
                       className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
@@ -320,15 +488,16 @@ export default function EditorPage() {
                     <input
                       type="text"
                       placeholder="Jelaskan kebutuhan step ini"
-                      value={selectedStep?.description || ""}
+                      value={selectedStepData?.description || ""}
                       onChange={(event) =>
                         handleStepChange(
-                          selectedStepId,
+                          selectedStep.group,
+                          selectedStep.id,
                           "description",
                           event.target.value
                         )
                       }
-                      disabled={!selectedStep}
+                      disabled={!selectedStepData}
                       className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
@@ -337,15 +506,16 @@ export default function EditorPage() {
                       Tipe Aksi
                     </label>
                     <select
-                      value={selectedStep?.type || "Form Input"}
+                      value={selectedStepData?.type || "Form Input"}
                       onChange={(event) =>
                         handleStepChange(
-                          selectedStepId,
+                          selectedStep.group,
+                          selectedStep.id,
                           "type",
                           event.target.value
                         )
                       }
-                      disabled={!selectedStep}
+                      disabled={!selectedStepData}
                       className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option>Form Input</option>
@@ -362,15 +532,16 @@ export default function EditorPage() {
                     <input
                       type="text"
                       placeholder="#username"
-                      value={selectedStep?.selector || ""}
+                      value={selectedStepData?.selector || ""}
                       onChange={(event) =>
                         handleStepChange(
-                          selectedStepId,
+                          selectedStep.group,
+                          selectedStep.id,
                           "selector",
                           event.target.value
                         )
                       }
-                      disabled={!selectedStep}
+                      disabled={!selectedStepData}
                       className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
@@ -381,15 +552,16 @@ export default function EditorPage() {
                     <input
                       type="text"
                       placeholder="Masukkan nilai untuk step ini"
-                      value={selectedStep?.value || ""}
+                      value={selectedStepData?.value || ""}
                       onChange={(event) =>
                         handleStepChange(
-                          selectedStepId,
+                          selectedStep.group,
+                          selectedStep.id,
                           "value",
                           event.target.value
                         )
                       }
-                      disabled={!selectedStep}
+                      disabled={!selectedStepData}
                       className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
