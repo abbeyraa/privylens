@@ -12,8 +12,10 @@ import {
   GripVertical,
   Trash2,
   FolderPlus,
+  User,
 } from "lucide-react";
 import { ActionDetails, actionTypes } from "./ActionDetails";
+import { stepTemplates } from "./stepTemplates";
 
 export default function EditorPage() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -164,6 +166,34 @@ export default function EditorPage() {
               {runError}
             </div>
           )}
+          <div className="flex items-center justify-between rounded-lg border border-[#e5e5e5] bg-white px-4 py-3">
+            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+              Step Templates
+            </div>
+            <div className="flex items-center gap-3">
+              {stepTemplates.map((template) => {
+                const Icon = template.icon === "User" ? User : User;
+                return (
+                  <div
+                    key={template.id}
+                    className="group relative inline-flex h-9 w-9 cursor-grab items-center justify-center rounded-full border border-[#e5e5e5] bg-white text-gray-500 hover:bg-gray-50"
+                    draggable
+                    onDragStart={(event) =>
+                      event.dataTransfer.setData(
+                        "text/plain",
+                        `template:${template.id}`
+                      )
+                    }
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span className="pointer-events-none absolute top-full mt-2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-[11px] text-white opacity-0 transition group-hover:opacity-100">
+                      {template.name}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
           {logsOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
               <div className="w-full max-w-3xl rounded-xl bg-white shadow-xl">

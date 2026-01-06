@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { initialGroups } from "./initialGroups";
+import { stepTemplates } from "./stepTemplates";
 
 const STORAGE_KEY = "otomate_editor_session";
 
@@ -17,9 +18,7 @@ export function useEditorHandlers() {
     groupId: "group-access",
     stepId: "access-step-1",
   });
-  const [openGroups, setOpenGroups] = useState(
-    buildOpenGroups(initialGroups)
-  );
+  const [openGroups, setOpenGroups] = useState(buildOpenGroups(initialGroups));
   const [draggedStepId, setDraggedStepId] = useState(null);
   const [draggedGroupId, setDraggedGroupId] = useState(null);
   const [draggedGroupSectionId, setDraggedGroupSectionId] = useState(null);
@@ -189,6 +188,34 @@ export function useEditorHandlers() {
   const handleDrop = (event, targetGroupId, targetStepId) => {
     event.preventDefault();
     const payload = event.dataTransfer.getData("text/plain");
+    if (payload.startsWith("template:")) {
+      const templateId = payload.split(":")[1];
+      if (!templateId) return;
+      const template = stepTemplates.find((item) => item.id === templateId);
+      if (!template) return;
+      const templateStep = {
+        id: `step-${Date.now()}`,
+        ...template.step,
+      };
+      setGroups((prev) =>
+        prev.map((group) => {
+          if (group.id !== targetGroupId) return group;
+          const nextSteps = [...group.steps];
+          const targetIndex = nextSteps.findIndex(
+            (step) => step.id === targetStepId
+          );
+          if (targetIndex === -1) {
+            nextSteps.push(templateStep);
+          } else {
+            nextSteps.splice(targetIndex, 0, templateStep);
+          }
+          return { ...group, steps: nextSteps };
+        })
+      );
+      setSelectedStep({ groupId: targetGroupId, stepId: templateStep.id });
+      return;
+    }
+
     const [dragGroupId, draggedStepId] = payload.split(":");
     if (!draggedStepId || draggedStepId === targetStepId) return;
     if (dragGroupId !== targetGroupId) return;
