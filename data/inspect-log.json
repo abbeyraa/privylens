@@ -1,48 +1,12 @@
 {
-  "startedAt": "2026-01-05T10:24:39.461Z",
-  "endedAt": "2026-01-05T10:24:52.082Z",
+  "startedAt": "2026-01-06T02:28:22.078Z",
+  "endedAt": "2026-01-06T02:28:27.732Z",
   "targetUrl": "about:blank",
   "events": [
     {
       "type": "navigation",
       "url": "about:blank",
-      "ts": "2026-01-05T10:24:39.978Z"
-    },
-    {
-      "type": "navigation",
-      "url": "https://accounts.google.com/v3/signin/identifier?continue=https%3A%2F%2Fmail.google.com%2Fmail%2Fu%2F0%2F&dsh=S-987020565%3A1767608686344664&emr=1&followup=https%3A%2F%2Fmail.google.com%2Fmail%2Fu%2F0%2F&ifkv=Ac2yZaXwq7_DZ7Z7gn-aWqHbwaCUeTUmkXjhRwY6xOLpf_lXxnkV7YVnWawgdkhZn5PPzH57SlOCDg&osid=1&passive=1209600&service=mail&flowName=GlifWebSignIn&flowEntry=ServiceLogin",
-      "ts": "2026-01-05T10:24:46.788Z"
-    },
-    {
-      "type": "navigation",
-      "url": "https://accounts.google.com/v3/signin/identifier?continue=https%3A%2F%2Fmail.google.com%2Fmail%2Fu%2F0%2F&dsh=S-987020565%3A1767608686344664&emr=1&followup=https%3A%2F%2Fmail.google.com%2Fmail%2Fu%2F0%2F&ifkv=Ac2yZaXwq7_DZ7Z7gn-aWqHbwaCUeTUmkXjhRwY6xOLpf_lXxnkV7YVnWawgdkhZn5PPzH57SlOCDg&osid=1&passive=1209600&service=mail&flowName=GlifWebSignIn&flowEntry=ServiceLogin",
-      "ts": "2026-01-05T10:24:47.394Z"
-    },
-    {
-      "type": "click",
-      "ts": "2026-01-05T10:24:49.368Z",
-      "selector": "div:nth-of-type(1) > div.VfPpkd-dgl2Hf-ppHlrf-sM5MNb > button.VfPpkd-LgbsSe.VfPpkd-LgbsSe-OWXEXe-dgl2Hf > div.VfPpkd-RLmnJb:nth-of-type(3)",
-      "text": "",
-      "tag": "div",
-      "url": "https://accounts.google.com/v3/signin/identifier?continue=https%3A%2F%2Fmail.google.com%2Fmail%2Fu%2F0%2F&dsh=S-987020565%3A1767608686344664&emr=1&followup=https%3A%2F%2Fmail.google.com%2Fmail%2Fu%2F0%2F&ifkv=Ac2yZaXwq7_DZ7Z7gn-aWqHbwaCUeTUmkXjhRwY6xOLpf_lXxnkV7YVnWawgdkhZn5PPzH57SlOCDg&osid=1&passive=1209600&service=mail&flowName=GlifWebSignIn&flowEntry=ServiceLogin"
-    },
-    {
-      "type": "click",
-      "ts": "2026-01-05T10:24:50.139Z",
-      "selector": "div.VfPpkd-xl07Ob-XxIAqe.VfPpkd-xl07Ob > ul.VfPpkd-StrnGf-rymPhb.DMZ54e > li.gNVsKb.G3hhxb:nth-of-type(2) > span.VfPpkd-StrnGf-rymPhb-b9t22c:nth-of-type(3)",
-      "text": "For my child",
-      "tag": "span",
-      "url": "https://accounts.google.com/v3/signin/identifier?continue=https%3A%2F%2Fmail.google.com%2Fmail%2Fu%2F0%2F&dsh=S-987020565%3A1767608686344664&emr=1&followup=https%3A%2F%2Fmail.google.com%2Fmail%2Fu%2F0%2F&ifkv=Ac2yZaXwq7_DZ7Z7gn-aWqHbwaCUeTUmkXjhRwY6xOLpf_lXxnkV7YVnWawgdkhZn5PPzH57SlOCDg&osid=1&passive=1209600&service=mail&flowName=GlifWebSignIn&flowEntry=ServiceLogin"
-    },
-    {
-      "type": "navigation",
-      "url": "https://accounts.google.com/lifecycle/steps/signup/kids/accountsetupchapter?continue=https://mail.google.com/mail/u/0/&dsh=S-987020565:1767608686344664&emr=1&flowEntry=SignUp&flowName=GlifWebSignIn&followup=https://mail.google.com/mail/u/0/&ifkv=Ac2yZaXwq7_DZ7Z7gn-aWqHbwaCUeTUmkXjhRwY6xOLpf_lXxnkV7YVnWawgdkhZn5PPzH57SlOCDg&ksf=1&osid=1&service=mail&TL=AHE1sGU4zDC4aXHaMlr9IHNiaCw_7BuPaFtwFDET-JaB6FQMIfOvdCBBH9yQhdnw",
-      "ts": "2026-01-05T10:24:50.363Z"
-    },
-    {
-      "type": "navigation",
-      "url": "https://accounts.google.com/lifecycle/steps/signup/kids/accountsetupchapter?continue=https://mail.google.com/mail/u/0/&dsh=S-987020565:1767608686344664&emr=1&flowEntry=SignUp&flowName=GlifWebSignIn&followup=https://mail.google.com/mail/u/0/&ifkv=Ac2yZaXwq7_DZ7Z7gn-aWqHbwaCUeTUmkXjhRwY6xOLpf_lXxnkV7YVnWawgdkhZn5PPzH57SlOCDg&ksf=1&osid=1&service=mail&TL=AHE1sGU4zDC4aXHaMlr9IHNiaCw_7BuPaFtwFDET-JaB6FQMIfOvdCBBH9yQhdnw",
-      "ts": "2026-01-05T10:24:50.862Z"
+      "ts": "2026-01-06T02:28:22.676Z"
     }
   ]
 }
