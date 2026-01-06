@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useEditorHandlers } from "./useEditorHandlers";
+import { saveTemplate } from "../template/templateStorage";
 import {
   ChevronDown,
   ChevronRight,
@@ -73,8 +74,22 @@ export default function EditorPage() {
             </div>
             <button
               type="button"
-              disabled
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-green-200 rounded-lg bg-green-100 text-green-700 cursor-not-allowed"
+              disabled={isInspecting || isRunning}
+              onClick={() => {
+                const template = {
+                  id: `template-${Date.now()}`,
+                  name: `Template ${new Date().toLocaleDateString("id-ID")}`,
+                  createdAt: new Date().toISOString(),
+                  targetUrl,
+                  groups,
+                };
+                saveTemplate(template);
+              }}
+              className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border rounded-lg ${
+                isInspecting || isRunning
+                  ? "border-green-100 bg-green-50 text-green-300 cursor-not-allowed"
+                  : "border-green-200 bg-green-100 text-green-700 hover:bg-green-200"
+              }`}
             >
               <FileText className="w-4 h-4" />
               Simpan
@@ -82,7 +97,7 @@ export default function EditorPage() {
             <button
               type="button"
               onClick={() => setShowResetConfirm(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#e5e5e5] rounded-lg bg-white text-gray-700 hover:bg-gray-50"
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-red-200 rounded-lg bg-red-50 text-red-700 hover:bg-red-100"
             >
               Reset
             </button>
