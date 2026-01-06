@@ -1,7 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { initialGroups } from "./initialGroups";
+
+const STORAGE_KEY = "otomate_editor_session";
+
+const buildOpenGroups = (groups) =>
+  groups.reduce((acc, group) => {
+    acc[group.id] = true;
+    return acc;
+  }, {});
 
 export function useEditorHandlers() {
   const [groups, setGroups] = useState(initialGroups);
@@ -9,11 +17,8 @@ export function useEditorHandlers() {
     groupId: "group-access",
     stepId: "access-step-1",
   });
-  const [openGroups, setOpenGroups] = useState(() =>
-    initialGroups.reduce((acc, group) => {
-      acc[group.id] = true;
-      return acc;
-    }, {})
+  const [openGroups, setOpenGroups] = useState(
+    buildOpenGroups(initialGroups)
   );
   const [draggedStepId, setDraggedStepId] = useState(null);
   const [draggedGroupId, setDraggedGroupId] = useState(null);
@@ -33,6 +38,45 @@ export function useEditorHandlers() {
   const selectedStepData = selectedGroup?.steps.find(
     (step) => step.id === selectedStep.stepId
   );
+
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(STORAGE_KEY);
+      if (!saved) return;
+      const parsed = JSON.parse(saved);
+      setGroups(parsed.groups || initialGroups);
+      setSelectedStep(
+        parsed.selectedStep || {
+          groupId: "group-access",
+          stepId: "access-step-1",
+        }
+      );
+      setOpenGroups(parsed.openGroups || buildOpenGroups(initialGroups));
+      setTargetUrl(parsed.targetUrl || "");
+      setLogsContent(parsed.logsContent || "");
+      setLogsOpen(Boolean(parsed.logsOpen));
+    } catch {
+      // Ignore storage failures.
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          groups,
+          selectedStep,
+          openGroups,
+          targetUrl,
+          logsContent,
+          logsOpen,
+        })
+      );
+    } catch {
+      // Ignore storage failures.
+    }
+  }, [groups, selectedStep, openGroups, targetUrl]);
 
   const getFirstStep = (nextGroups) => {
     for (const group of nextGroups) {
@@ -241,6 +285,18 @@ export function useEditorHandlers() {
 
   const closeLogs = () => setLogsOpen(false);
 
+  const resetEditor = () => {
+    setGroups(initialGroups);
+    setSelectedStep({ groupId: "group-access", stepId: "access-step-1" });
+    setOpenGroups(buildOpenGroups(initialGroups));
+    setTargetUrl("");
+    setLogsContent("");
+    setLogsOpen(false);
+    setInspectError("");
+    setRunError("");
+    setHasInspected(false);
+  };
+
   const runSteps = async () => {
     setIsRunning(true);
     setRunError("");
@@ -299,5 +355,6 @@ export function useEditorHandlers() {
     runSteps,
     loadLogs,
     closeLogs,
+    resetEditor,
   };
 }

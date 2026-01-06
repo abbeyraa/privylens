@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useEditorHandlers } from "./useEditorHandlers";
 import {
   ChevronDown,
@@ -14,6 +15,7 @@ import {
 import { ActionDetails, actionTypes } from "./ActionDetails";
 
 export default function EditorPage() {
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const {
     groups,
     selectedStep,
@@ -49,6 +51,7 @@ export default function EditorPage() {
     runSteps,
     loadLogs,
     closeLogs,
+    resetEditor,
   } = useEditorHandlers();
 
   return (
@@ -71,10 +74,17 @@ export default function EditorPage() {
             <button
               type="button"
               disabled
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#e5e5e5] rounded-lg bg-gray-100 text-gray-400 cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-green-200 rounded-lg bg-green-100 text-green-700 cursor-not-allowed"
             >
               <FileText className="w-4 h-4" />
-              Simpan Draft
+              Simpan
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowResetConfirm(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#e5e5e5] rounded-lg bg-white text-gray-700 hover:bg-gray-50"
+            >
+              Reset
             </button>
             <button
               type="button"
@@ -143,6 +153,39 @@ export default function EditorPage() {
                   <pre className="max-h-[60vh] overflow-y-auto rounded-lg bg-gray-50 p-4 text-xs text-gray-700">
                     {logsContent || "No logs yet."}
                   </pre>
+                </div>
+              </div>
+            </div>
+          )}
+          {showResetConfirm && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+              <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
+                <div className="border-b border-[#e5e5e5] px-5 py-4">
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    Reset Editor
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Semua perubahan akan dikembalikan ke default.
+                  </p>
+                </div>
+                <div className="px-5 py-4 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowResetConfirm(false)}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#e5e5e5] rounded-lg bg-white text-gray-700 hover:bg-gray-50"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      resetEditor();
+                      setShowResetConfirm(false);
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-red-100 text-red-700 hover:bg-red-200"
+                  >
+                    Reset
+                  </button>
                 </div>
               </div>
             </div>
