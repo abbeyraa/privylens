@@ -24,6 +24,7 @@ export function useEditorHandlers() {
   const [draggedGroupId, setDraggedGroupId] = useState(null);
   const [draggedGroupSectionId, setDraggedGroupSectionId] = useState(null);
   const [targetUrl, setTargetUrl] = useState("");
+  const [templateName, setTemplateName] = useState("");
   const [hasInspected, setHasInspected] = useState(false);
   const [isInspecting, setIsInspecting] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
@@ -53,6 +54,7 @@ export function useEditorHandlers() {
       );
       setOpenGroups(parsed.openGroups || buildOpenGroups(initialGroups));
       setTargetUrl(parsed.targetUrl || "");
+      setTemplateName(parsed.templateName || "");
       setLogsContent(parsed.logsContent || "");
       setLogsOpen(Boolean(parsed.logsOpen));
     } catch {
@@ -69,6 +71,7 @@ export function useEditorHandlers() {
           selectedStep,
           openGroups,
           targetUrl,
+          templateName,
           logsContent,
           logsOpen,
         })
@@ -290,6 +293,7 @@ export function useEditorHandlers() {
     setSelectedStep({ groupId: "group-access", stepId: "access-step-1" });
     setOpenGroups(buildOpenGroups(initialGroups));
     setTargetUrl("");
+    setTemplateName("");
     setLogsContent("");
     setLogsOpen(false);
     setInspectError("");
@@ -329,6 +333,8 @@ export function useEditorHandlers() {
     draggedGroupSectionId,
     targetUrl,
     setTargetUrl,
+    templateName,
+    setTemplateName,
     hasInspected,
     isInspecting,
     isRunning,
