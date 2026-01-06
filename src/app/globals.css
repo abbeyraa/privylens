@@ -26,6 +26,7 @@ body {
   color: var(--foreground);
   font-family: var(--font-poppins);
 }
+
 /* Hide scrollbars while keeping scroll behavior */
 * {
   -ms-overflow-style: none;
