@@ -13,6 +13,43 @@ async function writeLog(data) {
   await fs.writeFile(LOG_PATH, JSON.stringify(data, null, 2), "utf-8");
 }
 
+async function resolveLocator(page, step) {
+  const selector = step.selector?.trim();
+  const label = step.label?.trim();
+  const timeoutMs = Number.parseInt(step.timeoutMs, 10) || 10000;
+
+  if (selector) {
+    const locator = page.locator(selector).first();
+    await locator.waitFor({ state: "visible", timeout: timeoutMs });
+    return locator;
+  }
+
+  const candidates = [];
+  if (label) {
+    if (step.type === "Click") {
+      candidates.push(page.getByRole("button", { name: label }));
+    }
+    if (step.type === "Input") {
+      candidates.push(page.getByLabel(label));
+      candidates.push(page.getByRole("textbox", { name: label }));
+    }
+    candidates.push(page.getByText(label, { exact: true }));
+    candidates.push(page.getByLabel(label));
+  }
+
+  for (const locator of candidates) {
+    try {
+      const resolved = locator.first();
+      await resolved.waitFor({ state: "visible", timeout: timeoutMs });
+      return resolved;
+    } catch {
+      // Try the next locator candidate.
+    }
+  }
+
+  throw new Error("Selector or label is required");
+}
+
 export async function POST(request) {
   const payload = await request.json().catch(() => ({}));
   const targetUrl = payload.targetUrl?.trim() || "";
@@ -59,12 +96,21 @@ export async function POST(request) {
         try {
           switch (step.type) {
             case "Click":
-              if (!step.selector) throw new Error("Selector is required");
-              await page.click(step.selector);
+              {
+                const locator = await resolveLocator(page, step);
+                const timeoutMs = Number.parseInt(step.timeoutMs, 10) || 10000;
+                await locator.click({ timeout: timeoutMs });
+              }
               break;
             case "Input":
-              if (!step.selector) throw new Error("Selector is required");
-              await page.fill(step.selector, step.value || "");
+              {
+                const locator = await resolveLocator(page, step);
+                const timeoutMs = Number.parseInt(step.timeoutMs, 10) || 10000;
+                await locator.waitFor({ state: "visible", timeout: timeoutMs });
+                await locator.pressSequentially(step.value || "", {
+                  delay: 100,
+                });
+              }
               break;
             case "Wait":
               {
@@ -74,7 +120,13 @@ export async function POST(request) {
               break;
             case "Navigate":
               if (!step.url) throw new Error("URL is required");
-              await page.goto(step.url, { waitUntil: "domcontentloaded" });
+              {
+                const timeoutMs = Number.parseInt(step.timeoutMs, 10) || 10000;
+                await page.goto(step.url, {
+                  waitUntil: "domcontentloaded",
+                  timeout: timeoutMs,
+                });
+              }
               break;
             default:
               throw new Error("Unsupported action type");

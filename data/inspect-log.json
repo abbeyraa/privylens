@@ -1,38 +1,50 @@
 {
   "type": "run",
-  "startedAt": "2026-01-06T03:08:30.799Z",
-  "endedAt": "2026-01-06T03:08:39.030Z",
-  "targetUrl": "http://localhost/unhan-kaporlap/auth/login",
-  "status": "failed",
-  "error": {
-    "message": "page.fill: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - waiting for locator('#Username')\u001b[22m\n",
-    "group": "Access",
-    "step": "Isi Kredensial"
-  },
+  "startedAt": "2026-01-06T03:49:06.102Z",
+  "endedAt": "2026-01-06T03:49:29.172Z",
+  "targetUrl": "",
+  "status": "success",
+  "error": null,
   "steps": [
-    {
-      "group": "system",
-      "step": "Target URL",
-      "action": "Navigate",
-      "status": "success",
-      "ts": "2026-01-06T03:08:31.270Z"
-    },
     {
       "group": "Access",
       "step": "Buka Halaman Login",
       "action": "Navigate",
       "selector": "",
       "status": "success",
-      "ts": "2026-01-06T03:08:31.270Z"
+      "ts": "2026-01-06T03:49:06.682Z"
     },
     {
       "group": "Access",
       "step": "Isi Kredensial",
       "action": "Input",
-      "selector": "#Username",
-      "status": "failed",
-      "ts": "2026-01-06T03:08:31.325Z",
-      "error": "page.fill: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - waiting for locator('#Username')\u001b[22m\n"
+      "selector": "",
+      "status": "success",
+      "ts": "2026-01-06T03:49:06.767Z"
+    },
+    {
+      "group": "Access",
+      "step": "Step Baru",
+      "action": "Input",
+      "selector": "",
+      "status": "success",
+      "ts": "2026-01-06T03:49:17.290Z"
+    },
+    {
+      "group": "Access",
+      "step": "Klik Masuk",
+      "action": "Click",
+      "selector": "",
+      "status": "success",
+      "ts": "2026-01-06T03:49:27.802Z"
+    },
+    {
+      "group": "Access",
+      "step": "Step Baru",
+      "action": "Wait",
+      "selector": "",
+      "status": "success",
+      "ts": "2026-01-06T03:49:28.165Z"
     }
   ]
 }
