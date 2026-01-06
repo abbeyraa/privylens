@@ -11,84 +11,8 @@ import {
   Trash2,
   FolderPlus,
 } from "lucide-react";
-
-const initialGroups = [
-  {
-    id: "group-access",
-    name: "Access",
-    steps: [
-      {
-        id: "access-step-1",
-        title: "Buka Halaman Login",
-        description: "Arahkan browser ke https://contoh.app/login",
-        type: "Navigate",
-        selector: "",
-        value: "",
-        label: "",
-        waitMs: "",
-        url: "https://contoh.app/login",
-      },
-      {
-        id: "access-step-2",
-        title: "Isi Kredensial",
-        description: "Masukkan email dan password pengguna",
-        type: "Input",
-        selector: "#username",
-        value: "",
-        label: "",
-        waitMs: "",
-        url: "",
-      },
-      {
-        id: "access-step-3",
-        title: "Klik Masuk",
-        description: "Tekan tombol Masuk dan tunggu halaman berikutnya",
-        type: "Click",
-        selector: "#submit",
-        value: "",
-        label: "",
-        waitMs: "",
-        url: "",
-      },
-    ],
-  },
-  {
-    id: "group-after-login",
-    name: "After Login",
-    steps: [
-      {
-        id: "after-step-1",
-        title: "Validasi Dashboard",
-        description: "Pastikan dashboard muncul tanpa error",
-        type: "Read Text",
-        selector: ".dashboard",
-        value: "",
-        label: "Status Dashboard",
-        waitMs: "",
-        url: "",
-      },
-    ],
-  },
-  {
-    id: "group-checkout",
-    name: "Checkout Flow",
-    steps: [
-      {
-        id: "checkout-step-1",
-        title: "Buka Keranjang",
-        description: "Masuk ke halaman keranjang",
-        type: "Click",
-        selector: "#cart",
-        value: "",
-        label: "",
-        waitMs: "",
-        url: "",
-      },
-    ],
-  },
-];
-
-const actionTypes = ["Click", "Input", "Read Text", "Wait", "Navigate"];
+import { ActionDetails, actionTypes } from "./ActionDetails";
+import { initialGroups } from "./initialGroups";
 
 export default function EditorPage() {
   const [groups, setGroups] = useState(initialGroups);
@@ -106,9 +30,6 @@ export default function EditorPage() {
   const [draggedGroupId, setDraggedGroupId] = useState(null);
   const [draggedGroupSectionId, setDraggedGroupSectionId] = useState(null);
   const [targetUrl, setTargetUrl] = useState("");
-  const [loginRequired, setLoginRequired] = useState("Ya");
-  const [loginUsername, setLoginUsername] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
   const [hasInspected, setHasInspected] = useState(false);
   const [isInspecting, setIsInspecting] = useState(false);
   const [logsOpen, setLogsOpen] = useState(false);
@@ -309,194 +230,6 @@ export default function EditorPage() {
       setLogsOpen(true);
     } catch (error) {
       setInspectError(error.message || "Failed to load logs");
-    }
-  };
-
-  const renderActionFields = () => {
-    if (!selectedStepData) {
-      return (
-        <div className="rounded-lg border border-dashed border-[#e5e5e5] p-4 text-sm text-gray-500">
-          Pilih step untuk melihat detail.
-        </div>
-      );
-    }
-
-    switch (selectedStepData.type) {
-      case "Click":
-        return (
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-2">
-              Selector / Elemen
-            </label>
-            <input
-              type="text"
-              placeholder="#submit"
-              value={selectedStepData.selector}
-              onChange={(event) =>
-                handleStepChange(
-                  selectedStep.groupId,
-                  selectedStep.stepId,
-                  "selector",
-                  event.target.value
-                )
-              }
-              className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        );
-      case "Input":
-        return (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-2">
-                Selector / Elemen
-              </label>
-              <input
-                type="text"
-                placeholder="#username"
-                value={selectedStepData.selector}
-                onChange={(event) =>
-                  handleStepChange(
-                    selectedStep.groupId,
-                    selectedStep.stepId,
-                    "selector",
-                    event.target.value
-                  )
-                }
-                className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-2">
-                Nilai Input
-              </label>
-              <input
-                type="text"
-                placeholder="Masukkan nilai"
-                value={selectedStepData.value}
-                onChange={(event) =>
-                  handleStepChange(
-                    selectedStep.groupId,
-                    selectedStep.stepId,
-                    "value",
-                    event.target.value
-                  )
-                }
-                className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-        );
-      case "Read Text":
-        return (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-2">
-                Selector / Elemen
-              </label>
-              <input
-                type="text"
-                placeholder=".title"
-                value={selectedStepData.selector}
-                onChange={(event) =>
-                  handleStepChange(
-                    selectedStep.groupId,
-                    selectedStep.stepId,
-                    "selector",
-                    event.target.value
-                  )
-                }
-                className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-2">
-                Label Hasil
-              </label>
-              <input
-                type="text"
-                placeholder="Nama data yang disimpan"
-                value={selectedStepData.label}
-                onChange={(event) =>
-                  handleStepChange(
-                    selectedStep.groupId,
-                    selectedStep.stepId,
-                    "label",
-                    event.target.value
-                  )
-                }
-                className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-        );
-      case "Wait":
-        return (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-2">
-                Selector Opsional
-              </label>
-              <input
-                type="text"
-                placeholder=".loading"
-                value={selectedStepData.selector}
-                onChange={(event) =>
-                  handleStepChange(
-                    selectedStep.groupId,
-                    selectedStep.stepId,
-                    "selector",
-                    event.target.value
-                  )
-                }
-                className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-2">
-                Durasi (ms)
-              </label>
-              <input
-                type="number"
-                placeholder="1000"
-                value={selectedStepData.waitMs}
-                onChange={(event) =>
-                  handleStepChange(
-                    selectedStep.groupId,
-                    selectedStep.stepId,
-                    "waitMs",
-                    event.target.value
-                  )
-                }
-                className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-        );
-      case "Navigate":
-        return (
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-2">
-              URL Tujuan
-            </label>
-            <input
-              type="text"
-              placeholder="https://contoh.app"
-              value={selectedStepData.url}
-              onChange={(event) =>
-                handleStepChange(
-                  selectedStep.groupId,
-                  selectedStep.stepId,
-                  "url",
-                  event.target.value
-                )
-              }
-              className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        );
-      default:
-        return null;
     }
   };
 
@@ -751,72 +484,6 @@ export default function EditorPage() {
             <section className="space-y-6">
               <div className="bg-white border border-[#e5e5e5] rounded-lg p-6">
                 <h2 className="text-base font-semibold text-gray-900">
-                  Access
-                </h2>
-                <p className="text-xs text-gray-500 mt-1">
-                  Informasi dasar yang selalu dibutuhkan
-                </p>
-                <div className="mt-5 space-y-4">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-2">
-                      Target URL
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="https://contoh.app"
-                      value={targetUrl}
-                      onChange={(event) => setTargetUrl(event.target.value)}
-                      className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-2">
-                      Login Dibutuhkan
-                    </label>
-                    <select
-                      value={loginRequired}
-                      onChange={(event) => setLoginRequired(event.target.value)}
-                      className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option>Ya</option>
-                      <option>Tidak</option>
-                    </select>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-2">
-                        Username / Email
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="user@contoh.app"
-                        value={loginUsername}
-                        onChange={(event) =>
-                          setLoginUsername(event.target.value)
-                        }
-                        className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-2">
-                        Password
-                      </label>
-                      <input
-                        type="password"
-                        placeholder="••••••••"
-                        value={loginPassword}
-                        onChange={(event) =>
-                          setLoginPassword(event.target.value)
-                        }
-                        className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white border border-[#e5e5e5] rounded-lg p-6">
-                <h2 className="text-base font-semibold text-gray-900">
                   Step Details
                 </h2>
                 <p className="text-xs text-gray-500 mt-1">
@@ -887,7 +554,19 @@ export default function EditorPage() {
                       ))}
                     </select>
                   </div>
-                  <div className="space-y-4">{renderActionFields()}</div>
+                  <div className="space-y-4">
+                    <ActionDetails
+                      selectedStepData={selectedStepData}
+                      onChange={(key, value) =>
+                        handleStepChange(
+                          selectedStep.groupId,
+                          selectedStep.stepId,
+                          key,
+                          value
+                        )
+                      }
+                    />
+                  </div>
                 </div>
               </div>
             </section>
