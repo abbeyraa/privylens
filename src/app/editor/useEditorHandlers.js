@@ -1,7 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { initialGroups } from "./initialGroups";
+import { stepTemplates } from "./stepTemplates";
+
+const STORAGE_KEY = "otomate_editor_session";
+
+const buildOpenGroups = (groups) =>
+  groups.reduce((acc, group) => {
+    acc[group.id] = true;
+    return acc;
+  }, {});
 
 export function useEditorHandlers() {
   const [groups, setGroups] = useState(initialGroups);
@@ -9,16 +18,12 @@ export function useEditorHandlers() {
     groupId: "group-access",
     stepId: "access-step-1",
   });
-  const [openGroups, setOpenGroups] = useState(() =>
-    initialGroups.reduce((acc, group) => {
-      acc[group.id] = true;
-      return acc;
-    }, {})
-  );
+  const [openGroups, setOpenGroups] = useState(buildOpenGroups(initialGroups));
   const [draggedStepId, setDraggedStepId] = useState(null);
   const [draggedGroupId, setDraggedGroupId] = useState(null);
   const [draggedGroupSectionId, setDraggedGroupSectionId] = useState(null);
   const [targetUrl, setTargetUrl] = useState("");
+  const [templateName, setTemplateName] = useState("");
   const [hasInspected, setHasInspected] = useState(false);
   const [isInspecting, setIsInspecting] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
@@ -33,6 +38,47 @@ export function useEditorHandlers() {
   const selectedStepData = selectedGroup?.steps.find(
     (step) => step.id === selectedStep.stepId
   );
+
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(STORAGE_KEY);
+      if (!saved) return;
+      const parsed = JSON.parse(saved);
+      setGroups(parsed.groups || initialGroups);
+      setSelectedStep(
+        parsed.selectedStep || {
+          groupId: "group-access",
+          stepId: "access-step-1",
+        }
+      );
+      setOpenGroups(parsed.openGroups || buildOpenGroups(initialGroups));
+      setTargetUrl(parsed.targetUrl || "");
+      setTemplateName(parsed.templateName || "");
+      setLogsContent(parsed.logsContent || "");
+      setLogsOpen(Boolean(parsed.logsOpen));
+    } catch {
+      // Ignore storage failures.
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          groups,
+          selectedStep,
+          openGroups,
+          targetUrl,
+          templateName,
+          logsContent,
+          logsOpen,
+        })
+      );
+    } catch {
+      // Ignore storage failures.
+    }
+  }, [groups, selectedStep, openGroups, targetUrl]);
 
   const getFirstStep = (nextGroups) => {
     for (const group of nextGroups) {
@@ -142,6 +188,34 @@ export function useEditorHandlers() {
   const handleDrop = (event, targetGroupId, targetStepId) => {
     event.preventDefault();
     const payload = event.dataTransfer.getData("text/plain");
+    if (payload.startsWith("template:")) {
+      const templateId = payload.split(":")[1];
+      if (!templateId) return;
+      const template = stepTemplates.find((item) => item.id === templateId);
+      if (!template) return;
+      const templateStep = {
+        id: `step-${Date.now()}`,
+        ...template.step,
+      };
+      setGroups((prev) =>
+        prev.map((group) => {
+          if (group.id !== targetGroupId) return group;
+          const nextSteps = [...group.steps];
+          const targetIndex = nextSteps.findIndex(
+            (step) => step.id === targetStepId
+          );
+          if (targetIndex === -1) {
+            nextSteps.push(templateStep);
+          } else {
+            nextSteps.splice(targetIndex, 0, templateStep);
+          }
+          return { ...group, steps: nextSteps };
+        })
+      );
+      setSelectedStep({ groupId: targetGroupId, stepId: templateStep.id });
+      return;
+    }
+
     const [dragGroupId, draggedStepId] = payload.split(":");
     if (!draggedStepId || draggedStepId === targetStepId) return;
     if (dragGroupId !== targetGroupId) return;
@@ -241,6 +315,19 @@ export function useEditorHandlers() {
 
   const closeLogs = () => setLogsOpen(false);
 
+  const resetEditor = () => {
+    setGroups(initialGroups);
+    setSelectedStep({ groupId: "group-access", stepId: "access-step-1" });
+    setOpenGroups(buildOpenGroups(initialGroups));
+    setTargetUrl("");
+    setTemplateName("");
+    setLogsContent("");
+    setLogsOpen(false);
+    setInspectError("");
+    setRunError("");
+    setHasInspected(false);
+  };
+
   const runSteps = async () => {
     setIsRunning(true);
     setRunError("");
@@ -273,6 +360,8 @@ export function useEditorHandlers() {
     draggedGroupSectionId,
     targetUrl,
     setTargetUrl,
+    templateName,
+    setTemplateName,
     hasInspected,
     isInspecting,
     isRunning,
@@ -299,5 +388,6 @@ export function useEditorHandlers() {
     runSteps,
     loadLogs,
     closeLogs,
+    resetEditor,
   };
 }

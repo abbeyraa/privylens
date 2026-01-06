@@ -18,7 +18,7 @@ const menuItems = [
   },
   {
     name: "Template",
-    href: "/templates",
+    href: "/template",
     icon: FolderOpen,
   },
   {

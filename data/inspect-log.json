@@ -1,13 +1,13 @@
 {
   "type": "run",
-  "startedAt": "2026-01-06T03:56:00.798Z",
-  "endedAt": "2026-01-06T03:56:33.872Z",
+  "startedAt": "2026-01-06T05:01:44.788Z",
+  "endedAt": "2026-01-06T05:01:45.589Z",
   "targetUrl": "",
   "status": "failed",
   "error": {
-    "message": "locator.waitFor: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#cart').first() to be visible\u001b[22m\n",
-    "group": "Checkout Flow",
-    "step": "Buka Keranjang"
+    "message": "page.goto: net::ERR_NAME_NOT_RESOLVED at https://contoh.app/login\nCall log:\n\u001b[2m  - navigating to \"https://contoh.app/login\", waiting until \"domcontentloaded\"\u001b[22m\n",
+    "group": "Access",
+    "step": "Buka Halaman Login"
   },
   "steps": [
     {
@@ -15,49 +15,9 @@
       "step": "Buka Halaman Login",
       "action": "Navigate",
       "selector": "",
-      "status": "success",
-      "ts": "2026-01-06T03:56:01.361Z"
-    },
-    {
-      "group": "Access",
-      "step": "Input Username",
-      "action": "Input",
-      "selector": "",
-      "status": "success",
-      "ts": "2026-01-06T03:56:01.442Z"
-    },
-    {
-      "group": "Access",
-      "step": "Input Password",
-      "action": "Input",
-      "selector": "",
-      "status": "success",
-      "ts": "2026-01-06T03:56:11.951Z"
-    },
-    {
-      "group": "Access",
-      "step": "Klik Sign In",
-      "action": "Click",
-      "selector": "",
-      "status": "success",
-      "ts": "2026-01-06T03:56:22.450Z"
-    },
-    {
-      "group": "After Login",
-      "step": "Validasi Dashboard",
-      "action": "Wait",
-      "selector": ".dashboard",
-      "status": "success",
-      "ts": "2026-01-06T03:56:22.841Z"
-    },
-    {
-      "group": "Checkout Flow",
-      "step": "Buka Keranjang",
-      "action": "Click",
-      "selector": "#cart",
       "status": "failed",
-      "ts": "2026-01-06T03:56:23.854Z",
-      "error": "locator.waitFor: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#cart').first() to be visible\u001b[22m\n"
+      "ts": "2026-01-06T05:01:45.397Z",
+      "error": "page.goto: net::ERR_NAME_NOT_RESOLVED at https://contoh.app/login\nCall log:\n\u001b[2m  - navigating to \"https://contoh.app/login\", waiting until \"domcontentloaded\"\u001b[22m\n"
     }
   ]
 }

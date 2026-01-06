@@ -1,11 +1,10 @@
 "use client";
 
-import { Settings as SettingsIcon, Database } from "lucide-react";
+import { Settings as SettingsIcon } from "lucide-react";
 import { useState } from "react";
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState({
-    autoSave: true,
     language: "id",
   });
 
@@ -31,12 +30,6 @@ export default function SettingsPage() {
       icon: SettingsIcon,
       settings: [
         {
-          key: "autoSave",
-          label: "Auto Save",
-          description: "Otomatis menyimpan perubahan secara berkala",
-          type: "toggle",
-        },
-        {
           key: "language",
           label: "Language",
           description: "Pilih bahasa antarmuka",
@@ -48,38 +41,18 @@ export default function SettingsPage() {
         },
       ],
     },
-    {
-      title: "Data",
-      icon: Database,
-      settings: [
-        {
-          key: "exportData",
-          label: "Export Data",
-          description: "Ekspor semua data dan template",
-          type: "button",
-          action: () => alert("Export data functionality coming soon"),
-        },
-        {
-          key: "clearCache",
-          label: "Clear Cache",
-          description: "Hapus cache dan data sementara",
-          type: "button",
-          action: () => {
-            if (confirm("Apakah Anda yakin ingin menghapus cache?")) {
-              alert("Cache cleared");
-            }
-          },
-        },
-      ],
-    },
   ];
+
+  const visibleSections = settingSections.filter(
+    (section) => section.settings.length > 0
+  );
 
   return (
     <div className="h-full flex flex-col">
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-8">
         <div className="max-w-4xl mx-auto space-y-6">
-          {settingSections.map((section) => {
+          {visibleSections.map((section) => {
             const Icon = section.icon;
             return (
               <div
