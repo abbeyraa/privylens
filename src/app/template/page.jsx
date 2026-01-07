@@ -11,11 +11,16 @@ export default function TemplatesPage() {
   const [openError, setOpenError] = useState("");
   const [showLoadPrompt, setShowLoadPrompt] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [showDeletePrompt, setShowDeletePrompt] = useState(false);
+  const [templateToDelete, setTemplateToDelete] = useState(null);
   const router = useRouter();
 
-  const handleDelete = (templateId) => {
-    deleteTemplateById(templateId);
+  const handleDelete = () => {
+    if (!templateToDelete?.id) return;
+    deleteTemplateById(templateToDelete.id);
     setTemplates(getTemplates());
+    setShowDeletePrompt(false);
+    setTemplateToDelete(null);
   };
 
   const handleOpen = (template) => {
@@ -123,6 +128,39 @@ export default function TemplatesPage() {
               </div>
             </div>
           )}
+          {showDeletePrompt && (
+            <div className="fixed inset-0 z-50 flex h-screen w-screen items-center justify-center bg-black/40 backdrop-blur-[1px] p-4">
+              <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
+                <div className="border-b border-[#e5e5e5] px-5 py-4">
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    Hapus Template
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Template ini akan dihapus permanen.
+                  </p>
+                </div>
+                <div className="px-5 py-4 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDeletePrompt(false);
+                      setTemplateToDelete(null);
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#e5e5e5] rounded-lg bg-white text-gray-700 hover:bg-gray-50"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700"
+                  >
+                    Hapus
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
           {templates.length === 0 ? (
             <div className="px-6 py-10 text-center text-sm text-gray-500">
               Belum ada template tersimpan.
@@ -160,7 +198,10 @@ export default function TemplatesPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleDelete(template.id)}
+                      onClick={() => {
+                        setTemplateToDelete(template);
+                        setShowDeletePrompt(true);
+                      }}
                       className="text-xs font-medium text-red-700 border border-red-200 rounded-md px-3 py-1 hover:bg-red-50"
                     >
                       Delete
