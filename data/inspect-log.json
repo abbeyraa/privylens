@@ -1,23 +1,81 @@
 {
-  "type": "run",
-  "startedAt": "2026-01-06T05:01:44.788Z",
-  "endedAt": "2026-01-06T05:01:45.589Z",
-  "targetUrl": "",
-  "status": "failed",
-  "error": {
-    "message": "page.goto: net::ERR_NAME_NOT_RESOLVED at https://contoh.app/login\nCall log:\n\u001b[2m  - navigating to \"https://contoh.app/login\", waiting until \"domcontentloaded\"\u001b[22m\n",
-    "group": "Access",
-    "step": "Buka Halaman Login"
-  },
-  "steps": [
+  "schemaVersion": 1,
+  "runId": "inspect-1767764054694",
+  "startedAt": "2026-01-07T05:34:14.694Z",
+  "endedAt": "2026-01-07T05:34:27.728Z",
+  "targetUrl": "http://localhost:3001/login",
+  "events": [
     {
-      "group": "Access",
-      "step": "Buka Halaman Login",
-      "action": "Navigate",
-      "selector": "",
-      "status": "failed",
-      "ts": "2026-01-06T05:01:45.397Z",
-      "error": "page.goto: net::ERR_NAME_NOT_RESOLVED at https://contoh.app/login\nCall log:\n\u001b[2m  - navigating to \"https://contoh.app/login\", waiting until \"domcontentloaded\"\u001b[22m\n"
+      "id": "evt-1",
+      "ts": "2026-01-07T05:34:15.399Z",
+      "level": "info",
+      "type": "navigation",
+      "message": "Navigated to http://localhost:3001/login",
+      "data": {
+        "url": "http://localhost:3001/login"
+      }
+    },
+    {
+      "id": "evt-2",
+      "ts": "2026-01-07T05:34:15.828Z",
+      "level": "info",
+      "type": "navigation",
+      "message": "Navigated to http://localhost:3001/login",
+      "data": {
+        "url": "http://localhost:3001/login"
+      }
+    },
+    {
+      "id": "evt-3",
+      "ts": "2026-01-07T05:34:20.750Z",
+      "level": "info",
+      "type": "interaction.click",
+      "message": "Click input",
+      "data": {
+        "selector": "div.space-y-6:nth-of-type(1) > div:nth-of-type(1) > div.relative > input.w-full.pl-12",
+        "text": "",
+        "label": "Masukkan username",
+        "tag": "input",
+        "url": "http://localhost:3001/login"
+      }
+    },
+    {
+      "id": "evt-4",
+      "ts": "2026-01-07T05:34:22.665Z",
+      "level": "info",
+      "type": "interaction.click",
+      "message": "Click input",
+      "data": {
+        "selector": "div.space-y-6:nth-of-type(1) > div:nth-of-type(2) > div.relative > input.w-full.pl-12",
+        "text": "",
+        "label": "Masukkan password",
+        "tag": "input",
+        "url": "http://localhost:3001/login"
+      }
+    },
+    {
+      "id": "evt-5",
+      "ts": "2026-01-07T05:34:24.108Z",
+      "level": "info",
+      "type": "interaction.click",
+      "message": "Click button",
+      "data": {
+        "selector": "div.relative.w-full:nth-of-type(3) > form.bg-slate-800/50.backdrop-blur-xl > div.space-y-6:nth-of-type(1) > button.w-full.py-3",
+        "text": "Login",
+        "label": "",
+        "tag": "button",
+        "url": "http://localhost:3001/login"
+      }
+    },
+    {
+      "id": "evt-6",
+      "ts": "2026-01-07T05:34:25.791Z",
+      "level": "info",
+      "type": "navigation",
+      "message": "Navigated to http://localhost:3001/dashboard",
+      "data": {
+        "url": "http://localhost:3001/dashboard"
+      }
     }
   ]
 }

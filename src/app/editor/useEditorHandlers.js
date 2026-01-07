@@ -41,7 +41,7 @@ export function useEditorHandlers(templateId = "") {
   const [isInspecting, setIsInspecting] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [logsOpen, setLogsOpen] = useState(false);
-  const [logsContent, setLogsContent] = useState("");
+  const [logsContent, setLogsContent] = useState(null);
   const [inspectError, setInspectError] = useState("");
   const [runError, setRunError] = useState("");
   const [lastAddedGroupId, setLastAddedGroupId] = useState(null);
@@ -125,7 +125,7 @@ export function useEditorHandlers(templateId = "") {
         setOpenGroups(parsed.openGroups || buildOpenGroups(initialGroups));
         setTargetUrl(parsed.targetUrl || "");
         setTemplateName(parsed.templateName || "");
-        setLogsContent(parsed.logsContent || "");
+        setLogsContent(parsed.logsContent || null);
         setLogsOpen(Boolean(parsed.logsOpen));
       } catch {
         // Ignore storage failures.
@@ -406,7 +406,7 @@ export function useEditorHandlers(templateId = "") {
       if (!response.ok || !data.success) {
         throw new Error(data.error || "Logs not available");
       }
-      setLogsContent(JSON.stringify(data.data, null, 2));
+      setLogsContent(data.data || null);
       setLogsOpen(true);
     } catch (error) {
       setInspectError(error.message || "Failed to load logs");
@@ -421,7 +421,7 @@ export function useEditorHandlers(templateId = "") {
     setOpenGroups(buildOpenGroups(initialGroups));
     setTargetUrl("");
     setTemplateName("");
-    setLogsContent("");
+    setLogsContent(null);
     setLogsOpen(false);
     setInspectError("");
     setRunError("");

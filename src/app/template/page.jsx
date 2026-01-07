@@ -52,7 +52,7 @@ export default function TemplatesPage() {
             </div>
           )}
           {showLoadPrompt && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="fixed inset-0 z-50 flex h-screen w-screen items-center justify-center bg-black/40 backdrop-blur-[1px] p-4">
               <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
                 <div className="border-b border-[#e5e5e5] px-5 py-4">
                   <h3 className="text-sm font-semibold text-gray-900">
