@@ -14,6 +14,8 @@ import {
   FolderPlus,
   User,
   MousePointer2,
+  ChevronsDown,
+  ChevronsUp,
 } from "lucide-react";
 import { ActionDetails, actionTypes } from "./ActionDetails";
 import { stepTemplates } from "./stepTemplates";
@@ -22,6 +24,7 @@ export default function EditorPage() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [detailFlash, setDetailFlash] = useState(false);
+  const [showGroupToast, setShowGroupToast] = useState(false);
   const {
     groups,
     selectedStep,
@@ -41,11 +44,14 @@ export default function EditorPage() {
     inspectError,
     runError,
     selectedStepData,
+    lastAddedGroupId,
     handleSelectStep,
     handleClearSelection,
     handleAddGroup,
     handleDeleteGroup,
     handleToggleGroup,
+    handleExpandAllGroups,
+    handleCollapseAllGroups,
     handleAddStep,
     handleDeleteStep,
     handleStepChange,
@@ -63,12 +69,26 @@ export default function EditorPage() {
     resetEditor,
   } = useEditorHandlers();
 
+  const selectedGroup = groups.find(
+    (group) => group.id === selectedStep.groupId
+  );
+  const detailTitle =
+    selectedGroup && selectedStepData
+      ? `Detail > ${selectedGroup.name} > ${selectedStepData.title}`
+      : "Detail";
+
   useEffect(() => {
     if (!selectedStepData) return;
     setDetailFlash(true);
     const timer = setTimeout(() => setDetailFlash(false), 500);
     return () => clearTimeout(timer);
   }, [selectedStep.groupId, selectedStep.stepId, selectedStepData]);
+
+  useEffect(() => {
+    if (!showGroupToast) return;
+    const timer = setTimeout(() => setShowGroupToast(false), 1200);
+    return () => clearTimeout(timer);
+  }, [showGroupToast]);
 
   const detailKey = `${selectedStep.groupId}-${selectedStep.stepId}`;
 
@@ -313,14 +333,45 @@ export default function EditorPage() {
                     Kelola langkah dalam sub menu
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleAddGroup}
-                  className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100"
-                >
-                  <FolderPlus className="w-4 h-4" />
-                  Add Group
-                </button>
+                <div className="relative flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleExpandAllGroups}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#e5e5e5] bg-white text-gray-500 hover:bg-gray-50"
+                    title="Expand all"
+                    aria-label="Expand all"
+                  >
+                    <ChevronsDown className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCollapseAllGroups}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#e5e5e5] bg-white text-gray-500 hover:bg-gray-50"
+                    title="Collapse all"
+                    aria-label="Collapse all"
+                  >
+                    <ChevronsUp className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleAddGroup();
+                      setShowGroupToast(true);
+                    }}
+                    disabled={showGroupToast}
+                    className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100"
+                  >
+                    <FolderPlus className="w-4 h-4" />
+                    Add Group
+                  </button>
+                  {showGroupToast && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/80 px-2 backdrop-blur-sm">
+                      <div className="rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-[11px] font-semibold text-blue-700 shadow-sm toast-pop">
+                        Group berhasil ditambahkan
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="divide-y divide-[#e5e5e5]">
                 {groups.map((group) => (
@@ -332,7 +383,7 @@ export default function EditorPage() {
                     <div
                       className={`px-6 py-4 bg-gray-50 flex items-center justify-between ${
                         draggedGroupSectionId === group.id ? "bg-blue-50" : ""
-                      }`}
+                      } ${lastAddedGroupId === group.id ? "group-added" : ""}`}
                     >
                       <div className="flex items-center gap-3">
                         <button
@@ -483,8 +534,11 @@ export default function EditorPage() {
                   detailFlash ? "border-blue-200 shadow-lg detail-flash" : ""
                 }`}
               >
-                <h2 className="text-base font-semibold text-gray-900">
-                  Step Details
+                <h2
+                  key={detailTitle}
+                  className="text-base font-semibold text-gray-900 detail-title"
+                >
+                  {detailTitle}
                 </h2>
                 <p className="text-xs text-gray-500 mt-1">
                   Input atau informasi yang dibutuhkan untuk langkah terpilih
@@ -613,6 +667,55 @@ export default function EditorPage() {
 
         .detail-content {
           animation: detailSlide 220ms ease-out;
+        }
+
+        .detail-title {
+          animation: detailFade 200ms ease-out;
+        }
+
+        @keyframes detailFade {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+
+        @keyframes groupFlash {
+          0% {
+            background-color: #dbeafe;
+          }
+          100% {
+            background-color: #f9fafb;
+          }
+        }
+
+        .group-added {
+          animation: groupFlash 700ms ease-out;
+        }
+
+        @keyframes toastPop {
+          0% {
+            opacity: 0;
+            transform: translateY(-6px);
+          }
+          15% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+          85% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(-6px);
+          }
+        }
+
+        .toast-pop {
+          animation: toastPop 1.2s ease-out;
         }
       `}</style>
     </div>

@@ -31,6 +31,7 @@ export function useEditorHandlers() {
   const [logsContent, setLogsContent] = useState("");
   const [inspectError, setInspectError] = useState("");
   const [runError, setRunError] = useState("");
+  const [lastAddedGroupId, setLastAddedGroupId] = useState(null);
 
   const selectedGroup = groups.find(
     (group) => group.id === selectedStep.groupId
@@ -80,6 +81,12 @@ export function useEditorHandlers() {
     }
   }, [groups, selectedStep, openGroups, targetUrl]);
 
+  useEffect(() => {
+    if (!lastAddedGroupId) return;
+    const timer = setTimeout(() => setLastAddedGroupId(null), 700);
+    return () => clearTimeout(timer);
+  }, [lastAddedGroupId]);
+
   const getFirstStep = (nextGroups) => {
     for (const group of nextGroups) {
       if (group.steps.length > 0) {
@@ -106,6 +113,7 @@ export function useEditorHandlers() {
     };
     setGroups((prev) => [...prev, newGroup]);
     setOpenGroups((prev) => ({ ...prev, [newGroupId]: true }));
+    setLastAddedGroupId(newGroupId);
   };
 
   const handleDeleteGroup = (groupId) => {
@@ -121,6 +129,18 @@ export function useEditorHandlers() {
 
   const handleToggleGroup = (groupId) => {
     setOpenGroups((prev) => ({ ...prev, [groupId]: !prev[groupId] }));
+  };
+
+  const handleExpandAllGroups = () => {
+    setOpenGroups(buildOpenGroups(groups));
+  };
+
+  const handleCollapseAllGroups = () => {
+    const collapsed = groups.reduce((acc, group) => {
+      acc[group.id] = false;
+      return acc;
+    }, {});
+    setOpenGroups(collapsed);
   };
 
   const handleAddStep = (groupId) => {
@@ -374,11 +394,14 @@ export function useEditorHandlers() {
     inspectError,
     runError,
     selectedStepData,
+    lastAddedGroupId,
     handleSelectStep,
     handleClearSelection,
     handleAddGroup,
     handleDeleteGroup,
     handleToggleGroup,
+    handleExpandAllGroups,
+    handleCollapseAllGroups,
     handleAddStep,
     handleDeleteStep,
     handleStepChange,
