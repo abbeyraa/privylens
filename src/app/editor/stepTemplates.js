@@ -8,6 +8,7 @@ export const stepTemplates = [
       description: "Masukkan username",
       type: "Input",
       selector: "",
+      targetType: "label",
       value: "root",
       label: "Username",
       timeoutMs: "5000",

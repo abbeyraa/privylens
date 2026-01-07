@@ -84,6 +84,40 @@ export default function EditorPage() {
       ? `Detail > ${selectedGroup.name} > ${selectedStepData.title}`
       : "Detail";
 
+  const isBlank = (value) => {
+    if (value === 0) return false;
+    return !value || !String(value).trim();
+  };
+
+  const isStepInvalid = (step) => {
+    if (!step) return true;
+    const targetType =
+      step.targetType || (step.selector?.trim() ? "selector" : "label");
+    switch (step.type) {
+      case "Click":
+        return targetType === "selector"
+          ? isBlank(step.selector)
+          : isBlank(step.label);
+      case "Input": {
+        const targetMissing =
+          targetType === "selector"
+            ? isBlank(step.selector)
+            : isBlank(step.label);
+        return targetMissing || isBlank(step.value);
+      }
+      case "Wait":
+        return isBlank(step.waitMs);
+      case "Navigate":
+        return isBlank(step.url);
+      default:
+        return false;
+    }
+  };
+
+  const hasInvalidStep = groups.some((group) =>
+    group.steps.some((step) => isStepInvalid(step))
+  );
+
   useEffect(() => {
     if (!showGroupToast) return;
     const timer = setTimeout(() => setShowGroupToast(false), 1200);
@@ -190,9 +224,9 @@ export default function EditorPage() {
               <button
                 type="button"
                 onClick={runSteps}
-                disabled={isRunning || isInspecting}
+                disabled={isRunning || isInspecting || hasInvalidStep}
                 className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg ${
-                  isRunning || isInspecting
+                  isRunning || isInspecting || hasInvalidStep
                     ? "bg-blue-200 text-white cursor-not-allowed"
                     : "bg-blue-600 text-white hover:bg-blue-700"
                 }`}
@@ -394,6 +428,7 @@ export default function EditorPage() {
                             const isSelected =
                               selectedStep.groupId === group.id &&
                               selectedStep.stepId === step.id;
+                            const isInvalid = isStepInvalid(step);
                             return (
                               <div
                                 key={step.id}
@@ -414,7 +449,9 @@ export default function EditorPage() {
                                 tabIndex={0}
                                 data-step-row="true"
                                 className={`relative w-full text-left pl-6 pr-6 py-4 transition-colors cursor-pointer rounded-md ${
-                                  isSelected
+                                  isInvalid
+                                    ? "bg-red-50 ring-1 ring-red-200"
+                                    : isSelected
                                     ? "bg-blue-50 ring-1 ring-blue-200"
                                     : "hover:bg-gray-50"
                                 }`}

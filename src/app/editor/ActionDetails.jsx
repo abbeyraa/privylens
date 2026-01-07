@@ -11,31 +11,58 @@ export function ActionDetails({ selectedStepData, onChange }) {
     );
   }
 
+  const targetType =
+    selectedStepData.targetType ||
+    (selectedStepData.selector?.trim() ? "selector" : "label");
+  const targetValue =
+    targetType === "selector"
+      ? selectedStepData.selector
+      : selectedStepData.label;
+  const targetLabel =
+    targetType === "selector" ? "Selector / Elemen" : "Label / Text";
+  const targetPlaceholder = targetType === "selector" ? "#submit" : "Simpan";
+  const handleTargetTypeChange = (event) => {
+    const nextType = event.target.value;
+    onChange("targetType", nextType);
+    if (nextType === "label" && selectedStepData.selector) {
+      onChange("selector", "");
+    }
+    if (nextType === "selector" && selectedStepData.label) {
+      onChange("label", "");
+    }
+  };
+
   switch (selectedStepData.type) {
     case "Click":
       return (
         <div className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-2">
-              Label / Text
+              Target
             </label>
-            <input
-              type="text"
-              placeholder="Simpan"
-              value={selectedStepData.label}
-              onChange={(event) => onChange("label", event.target.value)}
-              className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <select
+              value={targetType}
+              onChange={handleTargetTypeChange}
+              className="w-full rounded-lg border border-[#e5e5e5] px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="label">Label / Text</option>
+              <option value="selector">Selector / Elemen</option>
+            </select>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-2">
-              Selector / Elemen (optional)
+              {targetLabel}
             </label>
             <input
               type="text"
-              placeholder="#submit"
-              value={selectedStepData.selector}
-              onChange={(event) => onChange("selector", event.target.value)}
+              placeholder={targetPlaceholder}
+              value={targetValue}
+              onChange={(event) =>
+                onChange(
+                  targetType === "selector" ? "selector" : "label",
+                  event.target.value
+                )
+              }
               className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -58,13 +85,31 @@ export function ActionDetails({ selectedStepData, onChange }) {
         <div className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-2">
-              Label / Text
+              Target
+            </label>
+            <select
+              value={targetType}
+              onChange={handleTargetTypeChange}
+              className="w-full rounded-lg border border-[#e5e5e5] px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="label">Label / Text</option>
+              <option value="selector">Selector / Elemen</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-2">
+              {targetLabel}
             </label>
             <input
               type="text"
-              placeholder="Email"
-              value={selectedStepData.label}
-              onChange={(event) => onChange("label", event.target.value)}
+              placeholder={targetType === "selector" ? "#username" : "Email"}
+              value={targetValue}
+              onChange={(event) =>
+                onChange(
+                  targetType === "selector" ? "selector" : "label",
+                  event.target.value
+                )
+              }
               className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -77,18 +122,6 @@ export function ActionDetails({ selectedStepData, onChange }) {
               placeholder="Masukkan nilai"
               value={selectedStepData.value}
               onChange={(event) => onChange("value", event.target.value)}
-              className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-2">
-              Selector / Elemen (optional)
-            </label>
-            <input
-              type="text"
-              placeholder="#username"
-              value={selectedStepData.selector}
-              onChange={(event) => onChange("selector", event.target.value)}
               className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
