@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useEditorHandlers } from "./useEditorHandlers";
 import { saveTemplate } from "../template/templateStorage";
 import {
@@ -21,6 +21,7 @@ import { stepTemplates } from "./stepTemplates";
 export default function EditorPage() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+  const [detailFlash, setDetailFlash] = useState(false);
   const {
     groups,
     selectedStep,
@@ -61,6 +62,15 @@ export default function EditorPage() {
     closeLogs,
     resetEditor,
   } = useEditorHandlers();
+
+  useEffect(() => {
+    if (!selectedStepData) return;
+    setDetailFlash(true);
+    const timer = setTimeout(() => setDetailFlash(false), 500);
+    return () => clearTimeout(timer);
+  }, [selectedStep.groupId, selectedStep.stepId, selectedStepData]);
+
+  const detailKey = `${selectedStep.groupId}-${selectedStep.stepId}`;
 
   return (
     <div className="h-full flex flex-col">
@@ -468,7 +478,11 @@ export default function EditorPage() {
             </section>
 
             <section className="space-y-6">
-              <div className="bg-white border border-[#e5e5e5] rounded-lg p-6">
+              <div
+                className={`bg-white border border-[#e5e5e5] rounded-lg p-6 transition-[box-shadow,border-color] duration-300 ${
+                  detailFlash ? "border-blue-200 shadow-lg detail-flash" : ""
+                }`}
+              >
                 <h2 className="text-base font-semibold text-gray-900">
                   Step Details
                 </h2>
@@ -476,7 +490,7 @@ export default function EditorPage() {
                   Input atau informasi yang dibutuhkan untuk langkah terpilih
                 </p>
                 {selectedStepData ? (
-                  <div className="mt-5 space-y-4">
+                  <div key={detailKey} className="mt-5 space-y-4 detail-content">
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-2">
                         Nama Step
@@ -553,7 +567,7 @@ export default function EditorPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="mt-6 rounded-lg border border-dashed border-[#e5e5e5] bg-gray-50 px-5 py-6 text-center">
+                  <div className="mt-6 rounded-lg border border-dashed border-[#e5e5e5] bg-gray-50 px-5 py-6 text-center detail-content">
                     <div className="mx-auto mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-gray-400 shadow-sm">
                       <MousePointer2 className="h-5 w-5" />
                     </div>
@@ -570,6 +584,37 @@ export default function EditorPage() {
           </div>
         </div>
       </div>
+      <style jsx>{`
+        @keyframes detailFlash {
+          0% {
+            background-color: #eff6ff;
+            box-shadow: 0 12px 24px -16px rgba(59, 130, 246, 0.6);
+          }
+          100% {
+            background-color: #ffffff;
+            box-shadow: none;
+          }
+        }
+
+        .detail-flash {
+          animation: detailFlash 500ms ease-out;
+        }
+
+        @keyframes detailSlide {
+          from {
+            opacity: 0;
+            transform: translateY(6px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .detail-content {
+          animation: detailSlide 220ms ease-out;
+        }
+      `}</style>
     </div>
   );
 }
