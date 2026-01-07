@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { initialGroups } from "./initialGroups";
 import { stepTemplates } from "./stepTemplates";
+import { getTemplates } from "../template/templateStorage";
 
 const STORAGE_KEY = "otomate_editor_session";
+const TEMPLATE_OPEN_KEY = "otomate_template_open";
 
 const buildOpenGroups = (groups) =>
   groups.reduce((acc, group) => {
@@ -12,8 +14,19 @@ const buildOpenGroups = (groups) =>
     return acc;
   }, {});
 
-export function useEditorHandlers() {
+const getFirstStep = (groups) => {
+  for (const group of groups) {
+    if (group.steps.length > 0) {
+      return { groupId: group.id, stepId: group.steps[0].id };
+    }
+  }
+  return null;
+};
+
+export function useEditorHandlers(templateId = "") {
   const [groups, setGroups] = useState(initialGroups);
+  const [isHydrated, setIsHydrated] = useState(false);
+  const lastLoadedTemplateId = useRef("");
   const [selectedStep, setSelectedStep] = useState({
     groupId: "group-access",
     stepId: "access-step-1",
@@ -28,7 +41,7 @@ export function useEditorHandlers() {
   const [isInspecting, setIsInspecting] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [logsOpen, setLogsOpen] = useState(false);
-  const [logsContent, setLogsContent] = useState("");
+  const [logsContent, setLogsContent] = useState(null);
   const [inspectError, setInspectError] = useState("");
   const [runError, setRunError] = useState("");
   const [lastAddedGroupId, setLastAddedGroupId] = useState(null);
@@ -40,29 +53,92 @@ export function useEditorHandlers() {
     (step) => step.id === selectedStep.stepId
   );
 
+  const loadTemplate = useCallback(
+    (template) => {
+      if (!template || typeof template !== "object") return false;
+      if (!Array.isArray(template.groups)) return false;
+      const nextGroups = template.groups;
+      setGroups(nextGroups);
+      setSelectedStep(getFirstStep(nextGroups) || { groupId: "", stepId: "" });
+      setOpenGroups(buildOpenGroups(nextGroups));
+      setTargetUrl(template.targetUrl || "");
+      setTemplateName(template.name || "");
+      setLogsContent("");
+      setLogsOpen(false);
+      setInspectError("");
+      setRunError("");
+      setHasInspected(false);
+      return true;
+    },
+    [
+      setGroups,
+      setSelectedStep,
+      setOpenGroups,
+      setTargetUrl,
+      setTemplateName,
+      setLogsContent,
+      setLogsOpen,
+      setInspectError,
+      setRunError,
+      setHasInspected,
+    ]
+  );
+
   useEffect(() => {
+    let loaded = false;
     try {
-      const saved = sessionStorage.getItem(STORAGE_KEY);
-      if (!saved) return;
-      const parsed = JSON.parse(saved);
-      setGroups(parsed.groups || initialGroups);
-      setSelectedStep(
-        parsed.selectedStep || {
-          groupId: "group-access",
-          stepId: "access-step-1",
+      const pending = sessionStorage.getItem(TEMPLATE_OPEN_KEY);
+      if (pending) {
+        const parsed = JSON.parse(pending);
+        if (parsed && Array.isArray(parsed.groups)) {
+          loadTemplate(parsed);
+          sessionStorage.removeItem(TEMPLATE_OPEN_KEY);
+          lastLoadedTemplateId.current = parsed.id || templateId || "";
+          loaded = true;
         }
-      );
-      setOpenGroups(parsed.openGroups || buildOpenGroups(initialGroups));
-      setTargetUrl(parsed.targetUrl || "");
-      setTemplateName(parsed.templateName || "");
-      setLogsContent(parsed.logsContent || "");
-      setLogsOpen(Boolean(parsed.logsOpen));
+      }
     } catch {
       // Ignore storage failures.
     }
-  }, []);
+
+    if (!loaded && templateId && templateId !== lastLoadedTemplateId.current) {
+      const templates = getTemplates();
+      const template = templates.find((item) => item.id === templateId);
+      if (loadTemplate(template)) {
+        lastLoadedTemplateId.current = templateId;
+        loaded = true;
+      }
+    }
+
+    if (!loaded && !templateId) {
+      try {
+        const saved = sessionStorage.getItem(STORAGE_KEY);
+        if (!saved) return;
+        const parsed = JSON.parse(saved);
+        setGroups(parsed.groups || initialGroups);
+        setSelectedStep(
+          parsed.selectedStep || {
+            groupId: "group-access",
+            stepId: "access-step-1",
+          }
+        );
+        setOpenGroups(parsed.openGroups || buildOpenGroups(initialGroups));
+        setTargetUrl(parsed.targetUrl || "");
+        setTemplateName(parsed.templateName || "");
+        setLogsContent(parsed.logsContent || null);
+        setLogsOpen(Boolean(parsed.logsOpen));
+      } catch {
+        // Ignore storage failures.
+      }
+    }
+
+    setIsHydrated(true);
+  }, [loadTemplate, templateId]);
 
   useEffect(() => {
+    if (!isHydrated) {
+      return;
+    }
     try {
       sessionStorage.setItem(
         STORAGE_KEY,
@@ -79,22 +155,22 @@ export function useEditorHandlers() {
     } catch {
       // Ignore storage failures.
     }
-  }, [groups, selectedStep, openGroups, targetUrl]);
+  }, [
+    groups,
+    selectedStep,
+    openGroups,
+    targetUrl,
+    templateName,
+    logsContent,
+    logsOpen,
+    isHydrated,
+  ]);
 
   useEffect(() => {
     if (!lastAddedGroupId) return;
     const timer = setTimeout(() => setLastAddedGroupId(null), 700);
     return () => clearTimeout(timer);
   }, [lastAddedGroupId]);
-
-  const getFirstStep = (nextGroups) => {
-    for (const group of nextGroups) {
-      if (group.steps.length > 0) {
-        return { groupId: group.id, stepId: group.steps[0].id };
-      }
-    }
-    return null;
-  };
 
   const handleSelectStep = (groupId, stepId) => {
     setSelectedStep({ groupId, stepId });
@@ -330,7 +406,7 @@ export function useEditorHandlers() {
       if (!response.ok || !data.success) {
         throw new Error(data.error || "Logs not available");
       }
-      setLogsContent(JSON.stringify(data.data, null, 2));
+      setLogsContent(data.data || null);
       setLogsOpen(true);
     } catch (error) {
       setInspectError(error.message || "Failed to load logs");
@@ -345,7 +421,7 @@ export function useEditorHandlers() {
     setOpenGroups(buildOpenGroups(initialGroups));
     setTargetUrl("");
     setTemplateName("");
-    setLogsContent("");
+    setLogsContent(null);
     setLogsOpen(false);
     setInspectError("");
     setRunError("");

@@ -1,8 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useEditorHandlers } from "./useEditorHandlers";
 import { saveTemplate } from "../template/templateStorage";
+import LogsModal from "./LogsModal";
+import ResetConfirmModal from "./ResetConfirmModal";
+import SavePromptModal from "./SavePromptModal";
+import SaveConfirmModal from "./SaveConfirmModal";
 import {
   ChevronDown,
   ChevronRight,
@@ -22,9 +27,11 @@ import { stepTemplates } from "./stepTemplates";
 
 export default function EditorPage() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showSavePrompt, setShowSavePrompt] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
-  const [detailFlash, setDetailFlash] = useState(false);
   const [showGroupToast, setShowGroupToast] = useState(false);
+  const searchParams = useSearchParams();
+  const templateId = searchParams.get("templateId") || "";
   const {
     groups,
     selectedStep,
@@ -67,7 +74,7 @@ export default function EditorPage() {
     loadLogs,
     closeLogs,
     resetEditor,
-  } = useEditorHandlers();
+  } = useEditorHandlers(templateId);
 
   const selectedGroup = groups.find(
     (group) => group.id === selectedStep.groupId
@@ -78,17 +85,17 @@ export default function EditorPage() {
       : "Detail";
 
   useEffect(() => {
-    if (!selectedStepData) return;
-    setDetailFlash(true);
-    const timer = setTimeout(() => setDetailFlash(false), 500);
-    return () => clearTimeout(timer);
-  }, [selectedStep.groupId, selectedStep.stepId, selectedStepData]);
-
-  useEffect(() => {
     if (!showGroupToast) return;
     const timer = setTimeout(() => setShowGroupToast(false), 1200);
     return () => clearTimeout(timer);
   }, [showGroupToast]);
+
+  useEffect(() => {
+    if (!templateId) return;
+    const cleaned = new URL(window.location.href);
+    cleaned.searchParams.delete("templateId");
+    window.history.replaceState({}, "", cleaned);
+  }, [templateId]);
 
   const detailKey = `${selectedStep.groupId}-${selectedStep.stepId}`;
 
@@ -120,17 +127,7 @@ export default function EditorPage() {
                 type="button"
                 disabled={isInspecting || isRunning}
                 onClick={() => {
-                  const template = {
-                    id: `template-${Date.now()}`,
-                    name:
-                      templateName?.trim() ||
-                      new Date().toLocaleString("id-ID"),
-                    createdAt: new Date().toISOString(),
-                    targetUrl,
-                    groups,
-                  };
-                  saveTemplate(template);
-                  setShowSaveConfirm(true);
+                  setShowSavePrompt(true);
                 }}
                 className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border rounded-lg ${
                   isInspecting || isRunning
@@ -244,84 +241,40 @@ export default function EditorPage() {
             </div>
           </div>
           {logsOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-              <div className="w-full max-w-3xl rounded-xl bg-white shadow-xl">
-                <div className="flex items-center justify-between border-b border-[#e5e5e5] px-5 py-4">
-                  <h3 className="text-sm font-semibold text-gray-900">
-                    Inspect Logs
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={closeLogs}
-                    className="text-xs text-gray-500 hover:text-gray-700"
-                  >
-                    Close
-                  </button>
-                </div>
-                <div className="p-5">
-                  <pre className="max-h-[60vh] overflow-y-auto rounded-lg bg-gray-50 p-4 text-xs text-gray-700">
-                    {logsContent || "No logs yet."}
-                  </pre>
-                </div>
-              </div>
-            </div>
+            <LogsModal logsContent={logsContent} onClose={closeLogs} />
           )}
-          {showResetConfirm && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-              <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
-                <div className="border-b border-[#e5e5e5] px-5 py-4">
-                  <h3 className="text-sm font-semibold text-gray-900">
-                    Reset Editor
-                  </h3>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Semua perubahan akan dikembalikan ke default.
-                  </p>
-                </div>
-                <div className="px-5 py-4 flex items-center justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowResetConfirm(false)}
-                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#e5e5e5] rounded-lg bg-white text-gray-700 hover:bg-gray-50"
-                  >
-                    Batal
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      resetEditor();
-                      setShowResetConfirm(false);
-                    }}
-                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-red-100 text-red-700 hover:bg-red-200"
-                  >
-                    Reset
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-          {showSaveConfirm && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-              <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
-                <div className="border-b border-[#e5e5e5] px-5 py-4">
-                  <h3 className="text-sm font-semibold text-gray-900">
-                    Template Tersimpan
-                  </h3>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Template sudah tersimpan di halaman Template.
-                  </p>
-                </div>
-                <div className="px-5 py-4 flex items-center justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setShowSaveConfirm(false)}
-                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#e5e5e5] rounded-lg bg-white text-gray-700 hover:bg-gray-50"
-                  >
-                    OK
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          <ResetConfirmModal
+            open={showResetConfirm}
+            onCancel={() => setShowResetConfirm(false)}
+            onConfirm={() => {
+              resetEditor();
+              setShowResetConfirm(false);
+            }}
+          />
+          <SavePromptModal
+            open={showSavePrompt}
+            templateName={templateName}
+            groups={groups}
+            onCancel={() => setShowSavePrompt(false)}
+            onConfirm={() => {
+              const template = {
+                id: `template-${Date.now()}`,
+                name:
+                  templateName?.trim() || new Date().toLocaleString("id-ID"),
+                createdAt: new Date().toISOString(),
+                targetUrl,
+                groups,
+              };
+              const snapshot = JSON.parse(JSON.stringify(template));
+              saveTemplate(snapshot);
+              setShowSavePrompt(false);
+              setShowSaveConfirm(true);
+            }}
+          />
+          <SaveConfirmModal
+            open={showSaveConfirm}
+            onClose={() => setShowSaveConfirm(false)}
+          />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <section className="bg-white border border-[#e5e5e5] rounded-lg overflow-hidden">
               <div className="px-6 py-4 border-b border-[#e5e5e5] flex items-center justify-between">
@@ -530,9 +483,8 @@ export default function EditorPage() {
 
             <section className="space-y-6">
               <div
-                className={`bg-white border border-[#e5e5e5] rounded-lg p-6 transition-[box-shadow,border-color] duration-300 ${
-                  detailFlash ? "border-blue-200 shadow-lg detail-flash" : ""
-                }`}
+                key={detailKey}
+                className="bg-white border border-[#e5e5e5] rounded-lg p-6 transition-[box-shadow,border-color] duration-300 detail-flash"
               >
                 <h2
                   key={detailTitle}
@@ -544,7 +496,10 @@ export default function EditorPage() {
                   Input atau informasi yang dibutuhkan untuk langkah terpilih
                 </p>
                 {selectedStepData ? (
-                  <div key={detailKey} className="mt-5 space-y-4 detail-content">
+                  <div
+                    key={detailKey}
+                    className="mt-5 space-y-4 detail-content"
+                  >
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-2">
                         Nama Step
@@ -642,10 +597,12 @@ export default function EditorPage() {
         @keyframes detailFlash {
           0% {
             background-color: #eff6ff;
+            border-color: #bfdbfe;
             box-shadow: 0 12px 24px -16px rgba(59, 130, 246, 0.6);
           }
           100% {
             background-color: #ffffff;
+            border-color: #e5e5e5;
             box-shadow: none;
           }
         }

@@ -30,6 +30,7 @@ export async function GET() {
 export async function POST(request) {
   const payload = await request.json().catch(() => ({}));
   const targetUrl = payload.url?.trim() || "about:blank";
+  const runId = `inspect-${Date.now()}`;
   const events = [];
   const startedAt = new Date().toISOString();
 
@@ -37,21 +38,39 @@ export async function POST(request) {
   const context = await browser.newContext();
   const page = await context.newPage();
 
+  let lastNavigationUrl = "";
   page.on("framenavigated", (frame) => {
-    if (frame === page.mainFrame()) {
-      events.push({
-        type: "navigation",
-        url: frame.url(),
-        ts: new Date().toISOString(),
-      });
-    }
+    if (frame !== page.mainFrame()) return;
+    const url = frame.url();
+    if (!url || url === "about:blank") return;
+    if (url === lastNavigationUrl) return;
+    lastNavigationUrl = url;
+    events.push({
+      id: `evt-${events.length + 1}`,
+      ts: new Date().toISOString(),
+      level: "info",
+      type: "navigation",
+      message: `Navigated to ${url}`,
+      data: {
+        url,
+      },
+    });
   });
 
-  await page.exposeBinding("reportClick", (_source, payload) => {
+  const pushEvent = (event) => {
     events.push({
-      type: "click",
+      id: `evt-${events.length + 1}`,
       ts: new Date().toISOString(),
-      ...payload,
+      level: "info",
+      ...event,
+    });
+  };
+
+  await page.exposeBinding("reportClick", (_source, payload) => {
+    pushEvent({
+      type: "interaction.click",
+      message: `Click ${payload?.tag || "element"}`,
+      data: payload,
     });
   });
 
@@ -60,6 +79,24 @@ export async function POST(request) {
       if (!element) return "";
       const raw = element.innerText || element.textContent || "";
       return raw.trim().slice(0, 120);
+    };
+
+    const labelOf = (element) => {
+      if (!element) return "";
+      if (element.labels && element.labels.length > 0) {
+        const labelText = textOf(element.labels[0]);
+        if (labelText) return labelText;
+      }
+      const aria = element.getAttribute && element.getAttribute("aria-label");
+      if (aria) return aria.trim().slice(0, 120);
+      const name = element.getAttribute && element.getAttribute("name");
+      if (name) return name.trim().slice(0, 120);
+      const placeholder =
+        element.getAttribute && element.getAttribute("placeholder");
+      if (placeholder) return placeholder.trim().slice(0, 120);
+      const wrappedLabel = element.closest && element.closest("label");
+      if (wrappedLabel) return textOf(wrappedLabel);
+      return "";
     };
 
     const selectorFor = (element) => {
@@ -98,6 +135,7 @@ export async function POST(request) {
           window.reportClick({
             selector: selectorFor(element),
             text: textOf(element),
+            label: labelOf(element),
             tag: element?.tagName?.toLowerCase?.() || "",
             url: window.location.href,
           });
@@ -115,9 +153,14 @@ export async function POST(request) {
     }
   } catch (error) {
     events.push({
-      type: "navigation-error",
+      id: `evt-${events.length + 1}`,
       ts: new Date().toISOString(),
+      level: "error",
+      type: "navigation-error",
       message: error.message,
+      data: {
+        url: targetUrl,
+      },
     });
   }
 
@@ -126,6 +169,8 @@ export async function POST(request) {
   await browser.close().catch(() => {});
 
   const payloadToSave = {
+    schemaVersion: 1,
+    runId,
     startedAt,
     endedAt: new Date().toISOString(),
     targetUrl,
@@ -138,5 +183,6 @@ export async function POST(request) {
     success: true,
     eventsCount: events.length,
     logPath: "data/inspect-log.json",
+    runId,
   });
 }
