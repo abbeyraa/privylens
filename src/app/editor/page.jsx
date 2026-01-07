@@ -4,6 +4,10 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useEditorHandlers } from "./useEditorHandlers";
 import { saveTemplate } from "../template/templateStorage";
+import LogsModal from "./LogsModal";
+import ResetConfirmModal from "./ResetConfirmModal";
+import SavePromptModal from "./SavePromptModal";
+import SaveConfirmModal from "./SaveConfirmModal";
 import {
   ChevronDown,
   ChevronRight,
@@ -26,8 +30,6 @@ export default function EditorPage() {
   const [showSavePrompt, setShowSavePrompt] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [showGroupToast, setShowGroupToast] = useState(false);
-  const [selectedLogEvent, setSelectedLogEvent] = useState(null);
-  const [showCopyToast, setShowCopyToast] = useState(false);
   const searchParams = useSearchParams();
   const templateId = searchParams.get("templateId") || "";
   const {
@@ -87,12 +89,6 @@ export default function EditorPage() {
     const timer = setTimeout(() => setShowGroupToast(false), 1200);
     return () => clearTimeout(timer);
   }, [showGroupToast]);
-
-  useEffect(() => {
-    if (!showCopyToast) return;
-    const timer = setTimeout(() => setShowCopyToast(false), 1200);
-    return () => clearTimeout(timer);
-  }, [showCopyToast]);
 
   useEffect(() => {
     if (!templateId) return;
@@ -245,310 +241,40 @@ export default function EditorPage() {
             </div>
           </div>
           {logsOpen && (
-            <div className="fixed inset-0 z-50 flex h-screen w-screen items-center justify-center bg-black/40 backdrop-blur-[1px] p-4">
-              <div className="w-full max-w-3xl rounded-xl bg-white shadow-xl">
-                <div className="flex items-center justify-between border-b border-[#e5e5e5] px-5 py-4">
-                  <h3 className="text-sm font-semibold text-gray-900">
-                    Inspect Logs
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedLogEvent(null);
-                      closeLogs();
-                    }}
-                    className="text-xs text-gray-500 hover:text-gray-700"
-                  >
-                    Close
-                  </button>
-                </div>
-                <div className="p-5">
-                  {logsContent && typeof logsContent === "object" ? (
-                    <div className="space-y-4">
-                      <div className="rounded-lg border border-[#e5e5e5] bg-gray-50 px-4 py-3 text-xs text-gray-700">
-                        <div className="flex flex-wrap items-center gap-3">
-                          <span className="font-semibold text-gray-900">
-                            Run: {logsContent.runId || "N/A"}
-                          </span>
-                          <span className="text-gray-500">
-                            {logsContent.events?.length || 0} events
-                          </span>
-                        </div>
-                        <div className="mt-2 text-[11px] text-gray-500">
-                          <span className="mr-3">
-                            Started: {logsContent.startedAt || "-"}
-                          </span>
-                          <span>Ended: {logsContent.endedAt || "-"}</span>
-                        </div>
-                        <div className="mt-1 text-[11px] text-gray-500">
-                          Target: {logsContent.targetUrl || "-"}
-                        </div>
-                        </div>
-                      <div className="grid grid-cols-1 md:grid-cols-[1.2fr_1fr] gap-4">
-                        <div className="max-h-[50vh] overflow-y-auto space-y-2 pr-1">
-                          {(logsContent.events || []).map((event) => (
-                            <button
-                              key={event.id || event.ts}
-                              type="button"
-                              onClick={() => setSelectedLogEvent(event)}
-                              className={`w-full text-left rounded-lg border px-4 py-3 text-xs hover:bg-gray-50 ${
-                                selectedLogEvent?.id === event.id
-                                  ? "border-blue-200 bg-blue-50 text-blue-900"
-                                  : "border-[#e5e5e5] text-gray-700"
-                              }`}
-                            >
-                              <div className="flex items-center justify-between gap-3">
-                                <span className="text-[10px] uppercase tracking-wide text-gray-400">
-                                  {event.type || "event"}
-                                </span>
-                                <span
-                                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                                    event.level === "error"
-                                      ? "bg-red-50 text-red-700"
-                                      : "bg-blue-50 text-blue-700"
-                                  }`}
-                                >
-                                  {event.level || "info"}
-                                </span>
-                              </div>
-                            </button>
-                          ))}
-                          {(!logsContent.events ||
-                            logsContent.events.length === 0) && (
-                            <div className="rounded-lg border border-dashed border-[#e5e5e5] bg-gray-50 px-4 py-6 text-center text-xs text-gray-500">
-                              Belum ada event.
-                            </div>
-                          )}
-                        </div>
-                        <div className="relative rounded-lg border border-[#e5e5e5] bg-white px-4 py-4 text-xs text-gray-700">
-                          {selectedLogEvent ? (
-                            <div className="space-y-3">
-                              <div>
-                                <div className="text-[10px] uppercase tracking-wide text-gray-400">
-                                  Type
-                                </div>
-                                <div className="font-medium text-gray-900">
-                                  {selectedLogEvent.type || "event"}
-                                </div>
-                              </div>
-                              <div>
-                                <div className="text-[10px] uppercase tracking-wide text-gray-400">
-                                  Timestamp
-                                </div>
-                                <div>{selectedLogEvent.ts || "-"}</div>
-                              </div>
-                              {selectedLogEvent.type === "navigation" && (
-                                <div>
-                                  <div className="text-[10px] uppercase tracking-wide text-gray-400">
-                                    URL
-                                  </div>
-                                  <div>
-                                    {selectedLogEvent.data?.url || "-"}
-                                  </div>
-                                </div>
-                              )}
-                              {selectedLogEvent.type === "interaction.click" && (
-                                <div>
-                                  <div className="text-[10px] uppercase tracking-wide text-gray-400">
-                                    Clicked
-                                  </div>
-                                  <div>
-                                    {selectedLogEvent.data?.text ||
-                                      selectedLogEvent.data?.label ||
-                                      "-"}
-                                  </div>
-                                  {selectedLogEvent.data?.tag && (
-                                    <div className="mt-1 text-[11px] text-gray-500">
-                                      Tag: {selectedLogEvent.data.tag}
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                              {selectedLogEvent.type === "navigation-error" && (
-                                <div>
-                                  <div className="text-[10px] uppercase tracking-wide text-gray-400">
-                                    Error
-                                  </div>
-                                  <div>{selectedLogEvent.message || "-"}</div>
-                                </div>
-                              )}
-                              <div>
-                                <div className="text-[10px] uppercase tracking-wide text-gray-400">
-                                  Data
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const selector =
-                                      selectedLogEvent.data?.selector || "";
-                                    if (!selector) return;
-                                    navigator.clipboard?.writeText(selector);
-                                    setShowCopyToast(true);
-                                  }}
-                                  className="mt-2 w-full text-left rounded-lg bg-gray-50 p-3 text-[11px] text-gray-700 break-words whitespace-pre-wrap hover:bg-gray-100"
-                                  title="Click to copy selector"
-                                >
-                                  {selectedLogEvent.data?.selector
-                                    ? `Selector: ${selectedLogEvent.data.selector}`
-                                    : "-"}
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="text-gray-500">
-                              Pilih event untuk melihat detail.
-                            </div>
-                          )}
-                          {showCopyToast && (
-                            <div className="absolute top-3 right-3 rounded-md border border-blue-100 bg-blue-50 px-3 py-1 text-[10px] font-semibold text-blue-700 shadow-sm">
-                              Copied
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <pre className="max-h-[60vh] overflow-y-auto rounded-lg bg-gray-50 p-4 text-xs text-gray-700">
-                      {logsContent || "No logs yet."}
-                    </pre>
-                  )}
-                </div>
-              </div>
-            </div>
+            <LogsModal logsContent={logsContent} onClose={closeLogs} />
           )}
-          {showResetConfirm && (
-            <div className="fixed inset-0 z-50 flex h-screen w-screen items-center justify-center bg-black/40 backdrop-blur-[1px] p-4">
-              <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
-                <div className="border-b border-[#e5e5e5] px-5 py-4">
-                  <h3 className="text-sm font-semibold text-gray-900">
-                    Reset Editor
-                  </h3>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Semua perubahan akan dikembalikan ke default.
-                  </p>
-                </div>
-                <div className="px-5 py-4 flex items-center justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowResetConfirm(false)}
-                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#e5e5e5] rounded-lg bg-white text-gray-700 hover:bg-gray-50"
-                  >
-                    Batal
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      resetEditor();
-                      setShowResetConfirm(false);
-                    }}
-                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-red-100 text-red-700 hover:bg-red-200"
-                  >
-                    Reset
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-          {showSavePrompt && (
-            <div className="fixed inset-0 z-50 flex h-screen w-screen items-center justify-center bg-black/40 backdrop-blur-[1px] p-4">
-              <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
-                <div className="border-b border-[#e5e5e5] px-5 py-4">
-                  <h3 className="text-sm font-semibold text-gray-900">
-                    Simpan Template
-                  </h3>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Pastikan struktur template sudah sesuai sebelum disimpan.
-                  </p>
-                </div>
-                <div className="px-5 py-4 space-y-3">
-                  <div className="rounded-lg border border-[#e5e5e5] bg-gray-50 px-3 py-2 text-xs text-gray-700">
-                    <div className="font-semibold text-gray-800">
-                      {templateName?.trim() || "Template"}
-                    </div>
-                    <div className="mt-2 space-y-2">
-                      {groups.length === 0 ? (
-                        <div className="text-gray-500">Belum ada grup.</div>
-                      ) : (
-                        groups.map((group) => (
-                          <div key={group.id}>
-                            <div className="font-semibold text-gray-700">
-                              {group.name || "Grup"}
-                            </div>
-                            <div className="mt-1 ml-4 space-y-1">
-                              {group.steps && group.steps.length > 0 ? (
-                                group.steps.map((step) => (
-                                  <div key={step.id} className="text-gray-600">
-                                    - {step.title || "Step"}
-                                  </div>
-                                ))
-                              ) : (
-                                <div className="text-gray-500">
-                                  - Belum ada step.
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-end gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setShowSavePrompt(false)}
-                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#e5e5e5] rounded-lg bg-white text-gray-700 hover:bg-gray-50"
-                    >
-                      Batal
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const template = {
-                          id: `template-${Date.now()}`,
-                          name:
-                            templateName?.trim() ||
-                            new Date().toLocaleString("id-ID"),
-                          createdAt: new Date().toISOString(),
-                          targetUrl,
-                          groups,
-                        };
-                        const snapshot = JSON.parse(JSON.stringify(template));
-                        saveTemplate(snapshot);
-                        setShowSavePrompt(false);
-                        setShowSaveConfirm(true);
-                      }}
-                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-green-600 text-white hover:bg-green-700"
-                    >
-                      Simpan
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          {showSaveConfirm && (
-            <div className="fixed inset-0 z-50 flex h-screen w-screen items-center justify-center bg-black/40 backdrop-blur-[1px] p-4">
-              <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
-                <div className="border-b border-[#e5e5e5] px-5 py-4">
-                  <h3 className="text-sm font-semibold text-gray-900">
-                    Template Tersimpan
-                  </h3>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Template sudah tersimpan di halaman Template.
-                  </p>
-                </div>
-                <div className="px-5 py-4 flex items-center justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setShowSaveConfirm(false)}
-                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#e5e5e5] rounded-lg bg-white text-gray-700 hover:bg-gray-50"
-                  >
-                    OK
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          <ResetConfirmModal
+            open={showResetConfirm}
+            onCancel={() => setShowResetConfirm(false)}
+            onConfirm={() => {
+              resetEditor();
+              setShowResetConfirm(false);
+            }}
+          />
+          <SavePromptModal
+            open={showSavePrompt}
+            templateName={templateName}
+            groups={groups}
+            onCancel={() => setShowSavePrompt(false)}
+            onConfirm={() => {
+              const template = {
+                id: `template-${Date.now()}`,
+                name:
+                  templateName?.trim() || new Date().toLocaleString("id-ID"),
+                createdAt: new Date().toISOString(),
+                targetUrl,
+                groups,
+              };
+              const snapshot = JSON.parse(JSON.stringify(template));
+              saveTemplate(snapshot);
+              setShowSavePrompt(false);
+              setShowSaveConfirm(true);
+            }}
+          />
+          <SaveConfirmModal
+            open={showSaveConfirm}
+            onClose={() => setShowSaveConfirm(false)}
+          />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <section className="bg-white border border-[#e5e5e5] rounded-lg overflow-hidden">
               <div className="px-6 py-4 border-b border-[#e5e5e5] flex items-center justify-between">

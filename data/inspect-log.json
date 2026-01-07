@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
-  "runId": "inspect-1767764199048",
-  "startedAt": "2026-01-07T05:36:39.048Z",
-  "endedAt": "2026-01-07T05:36:47.687Z",
+  "runId": "inspect-1767765173749",
+  "startedAt": "2026-01-07T05:52:53.749Z",
+  "endedAt": "2026-01-07T05:53:20.781Z",
   "targetUrl": "http://localhost:3001/login",
   "events": [
     {
       "id": "evt-1",
-      "ts": "2026-01-07T05:36:39.480Z",
+      "ts": "2026-01-07T05:52:54.359Z",
       "level": "info",
       "type": "navigation",
       "message": "Navigated to http://localhost:3001/login",
@@ -17,7 +17,7 @@
     },
     {
       "id": "evt-2",
-      "ts": "2026-01-07T05:36:41.548Z",
+      "ts": "2026-01-07T05:52:56.773Z",
       "level": "info",
       "type": "interaction.click",
       "message": "Click input",
@@ -31,7 +31,7 @@
     },
     {
       "id": "evt-3",
-      "ts": "2026-01-07T05:36:42.808Z",
+      "ts": "2026-01-07T05:52:58.853Z",
       "level": "info",
       "type": "interaction.click",
       "message": "Click input",
@@ -45,7 +45,35 @@
     },
     {
       "id": "evt-4",
-      "ts": "2026-01-07T05:36:43.610Z",
+      "ts": "2026-01-07T05:52:59.919Z",
+      "level": "info",
+      "type": "interaction.click",
+      "message": "Click span",
+      "data": {
+        "selector": "div.space-y-6:nth-of-type(1) > div.flex.items-center:nth-of-type(3) > label.flex.items-center > span.text-sm.text-slate-400",
+        "text": "Ingat saya",
+        "label": "Ingat saya",
+        "tag": "span",
+        "url": "http://localhost:3001/login"
+      }
+    },
+    {
+      "id": "evt-5",
+      "ts": "2026-01-07T05:52:59.921Z",
+      "level": "info",
+      "type": "interaction.click",
+      "message": "Click input",
+      "data": {
+        "selector": "div.space-y-6:nth-of-type(1) > div.flex.items-center:nth-of-type(3) > label.flex.items-center > input.w-4.h-4",
+        "text": "",
+        "label": "Ingat saya",
+        "tag": "input",
+        "url": "http://localhost:3001/login"
+      }
+    },
+    {
+      "id": "evt-6",
+      "ts": "2026-01-07T05:53:00.285Z",
       "level": "info",
       "type": "interaction.click",
       "message": "Click button",
@@ -58,13 +86,231 @@
       }
     },
     {
-      "id": "evt-5",
-      "ts": "2026-01-07T05:36:45.292Z",
+      "id": "evt-7",
+      "ts": "2026-01-07T05:53:01.980Z",
       "level": "info",
       "type": "navigation",
       "message": "Navigated to http://localhost:3001/dashboard",
       "data": {
         "url": "http://localhost:3001/dashboard"
+      }
+    },
+    {
+      "id": "evt-8",
+      "ts": "2026-01-07T05:53:03.244Z",
+      "level": "info",
+      "type": "interaction.click",
+      "message": "Click ul",
+      "data": {
+        "selector": "div.min-h-screen.bg-linear-to-br:nth-of-type(2) > aside.fixed.left-0 > nav.flex.flex-col > ul.space-y-2",
+        "text": "Dashboard\nAbsensi\nTable\nForms\nSettings",
+        "label": "",
+        "tag": "ul",
+        "url": "http://localhost:3001/dashboard"
+      }
+    },
+    {
+      "id": "evt-9",
+      "ts": "2026-01-07T05:53:03.586Z",
+      "level": "info",
+      "type": "interaction.click",
+      "message": "Click a",
+      "data": {
+        "selector": "nav.flex.flex-col > ul.space-y-2 > li:nth-of-type(2) > a.flex.items-center",
+        "text": "Absensi",
+        "label": "",
+        "tag": "a",
+        "url": "http://localhost:3001/dashboard"
+      }
+    },
+    {
+      "id": "evt-10",
+      "ts": "2026-01-07T05:53:03.694Z",
+      "level": "info",
+      "type": "navigation",
+      "message": "Navigated to http://localhost:3001/dashboard/absensi",
+      "data": {
+        "url": "http://localhost:3001/dashboard/absensi"
+      }
+    },
+    {
+      "id": "evt-11",
+      "ts": "2026-01-07T05:53:05.538Z",
+      "level": "info",
+      "type": "interaction.click",
+      "message": "Click a",
+      "data": {
+        "selector": "nav.flex.flex-col > ul.space-y-2 > li:nth-of-type(3) > a.flex.items-center",
+        "text": "Table",
+        "label": "",
+        "tag": "a",
+        "url": "http://localhost:3001/dashboard/absensi"
+      }
+    },
+    {
+      "id": "evt-12",
+      "ts": "2026-01-07T05:53:05.618Z",
+      "level": "info",
+      "type": "navigation",
+      "message": "Navigated to http://localhost:3001/dashboard/table",
+      "data": {
+        "url": "http://localhost:3001/dashboard/table"
+      }
+    },
+    {
+      "id": "evt-13",
+      "ts": "2026-01-07T05:53:06.689Z",
+      "level": "info",
+      "type": "interaction.click",
+      "message": "Click a",
+      "data": {
+        "selector": "nav.flex.flex-col > ul.space-y-2 > li:nth-of-type(4) > a.flex.items-center",
+        "text": "Forms",
+        "label": "",
+        "tag": "a",
+        "url": "http://localhost:3001/dashboard/table"
+      }
+    },
+    {
+      "id": "evt-14",
+      "ts": "2026-01-07T05:53:06.893Z",
+      "level": "info",
+      "type": "navigation",
+      "message": "Navigated to http://localhost:3001/dashboard/forms",
+      "data": {
+        "url": "http://localhost:3001/dashboard/forms"
+      }
+    },
+    {
+      "id": "evt-15",
+      "ts": "2026-01-07T05:53:07.662Z",
+      "level": "info",
+      "type": "interaction.click",
+      "message": "Click a",
+      "data": {
+        "selector": "nav.flex.flex-col > ul.space-y-2 > li:nth-of-type(5) > a.flex.items-center",
+        "text": "Settings",
+        "label": "",
+        "tag": "a",
+        "url": "http://localhost:3001/dashboard/forms"
+      }
+    },
+    {
+      "id": "evt-16",
+      "ts": "2026-01-07T05:53:07.834Z",
+      "level": "info",
+      "type": "navigation",
+      "message": "Navigated to http://localhost:3001/dashboard/settings",
+      "data": {
+        "url": "http://localhost:3001/dashboard/settings"
+      }
+    },
+    {
+      "id": "evt-17",
+      "ts": "2026-01-07T05:53:08.608Z",
+      "level": "info",
+      "type": "interaction.click",
+      "message": "Click a",
+      "data": {
+        "selector": "nav.flex.flex-col > ul.space-y-2 > li:nth-of-type(4) > a.flex.items-center",
+        "text": "Forms",
+        "label": "",
+        "tag": "a",
+        "url": "http://localhost:3001/dashboard/settings"
+      }
+    },
+    {
+      "id": "evt-18",
+      "ts": "2026-01-07T05:53:08.683Z",
+      "level": "info",
+      "type": "navigation",
+      "message": "Navigated to http://localhost:3001/dashboard/forms",
+      "data": {
+        "url": "http://localhost:3001/dashboard/forms"
+      }
+    },
+    {
+      "id": "evt-19",
+      "ts": "2026-01-07T05:53:09.191Z",
+      "level": "info",
+      "type": "interaction.click",
+      "message": "Click input",
+      "data": {
+        "selector": "div.bg-slate-800/50.backdrop-blur-xl:nth-of-type(1) > div.grid.grid-cols-1:nth-of-type(2) > div:nth-of-type(1) > input.w-full.px-4",
+        "text": "",
+        "label": "fullName",
+        "tag": "input",
+        "url": "http://localhost:3001/dashboard/forms"
+      }
+    },
+    {
+      "id": "evt-20",
+      "ts": "2026-01-07T05:53:12.150Z",
+      "level": "info",
+      "type": "interaction.click",
+      "message": "Click input",
+      "data": {
+        "selector": "div.bg-slate-800/50.backdrop-blur-xl:nth-of-type(1) > div.grid.grid-cols-1:nth-of-type(2) > div:nth-of-type(2) > input.w-full.px-4",
+        "text": "",
+        "label": "email",
+        "tag": "input",
+        "url": "http://localhost:3001/dashboard/forms"
+      }
+    },
+    {
+      "id": "evt-21",
+      "ts": "2026-01-07T05:53:13.289Z",
+      "level": "info",
+      "type": "interaction.click",
+      "message": "Click input",
+      "data": {
+        "selector": "div.bg-slate-800/50.backdrop-blur-xl:nth-of-type(1) > div.grid.grid-cols-1:nth-of-type(2) > div:nth-of-type(3) > input.w-full.px-4",
+        "text": "",
+        "label": "phone",
+        "tag": "input",
+        "url": "http://localhost:3001/dashboard/forms"
+      }
+    },
+    {
+      "id": "evt-22",
+      "ts": "2026-01-07T05:53:14.538Z",
+      "level": "info",
+      "type": "interaction.click",
+      "message": "Click input",
+      "data": {
+        "selector": "div.bg-slate-800/50.backdrop-blur-xl:nth-of-type(1) > div.grid.grid-cols-1:nth-of-type(2) > div:nth-of-type(4) > input.w-full.px-4",
+        "text": "",
+        "label": "birthDate",
+        "tag": "input",
+        "url": "http://localhost:3001/dashboard/forms"
+      }
+    },
+    {
+      "id": "evt-23",
+      "ts": "2026-01-07T05:53:14.806Z",
+      "level": "info",
+      "type": "interaction.click",
+      "message": "Click input",
+      "data": {
+        "selector": "div.bg-slate-800/50.backdrop-blur-xl:nth-of-type(1) > div.grid.grid-cols-1:nth-of-type(2) > div:nth-of-type(4) > input.w-full.px-4",
+        "text": "",
+        "label": "birthDate",
+        "tag": "input",
+        "url": "http://localhost:3001/dashboard/forms"
+      }
+    },
+    {
+      "id": "evt-24",
+      "ts": "2026-01-07T05:53:19.078Z",
+      "level": "info",
+      "type": "interaction.click",
+      "message": "Click button",
+      "data": {
+        "selector": "div.max-w-4xl.mx-auto > form.space-y-8 > div.flex.gap-4:nth-of-type(5) > button.px-6.py-4:nth-of-type(2)",
+        "text": "Reset",
+        "label": "",
+        "tag": "button",
+        "url": "http://localhost:3001/dashboard/forms"
       }
     }
   ]
