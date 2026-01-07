@@ -1,18 +1,39 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { deleteTemplateById, getTemplates } from "./templateStorage";
 
-export default function TemplatesPage() {
-  const [templates, setTemplates] = useState([]);
+const TEMPLATE_OPEN_KEY = "otomate_template_open";
 
-  useEffect(() => {
-    setTemplates(getTemplates());
-  }, []);
+export default function TemplatesPage() {
+  const [templates, setTemplates] = useState(() => getTemplates());
+  const [openError, setOpenError] = useState("");
+  const [showLoadPrompt, setShowLoadPrompt] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const router = useRouter();
 
   const handleDelete = (templateId) => {
     deleteTemplateById(templateId);
     setTemplates(getTemplates());
+  };
+
+  const handleOpen = (template) => {
+    if (!template || typeof template !== "object") {
+      setOpenError("Template tidak valid.");
+      return;
+    }
+    if (!Array.isArray(template.groups)) {
+      setOpenError("Data template tidak lengkap.");
+      return;
+    }
+    try {
+      sessionStorage.setItem(TEMPLATE_OPEN_KEY, JSON.stringify(template));
+    } catch {
+      // Ignore storage failures.
+    }
+    setOpenError("");
+    router.push(`/editor?templateId=${template.id}`);
   };
 
   return (
@@ -25,6 +46,83 @@ export default function TemplatesPage() {
           </span>
         </div>
         <div className="bg-white border border-[#e5e5e5] rounded-lg">
+          {openError && (
+            <div className="px-6 py-4 text-sm text-red-700 bg-red-50 border-b border-red-100">
+              {openError}
+            </div>
+          )}
+          {showLoadPrompt && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+              <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
+                <div className="border-b border-[#e5e5e5] px-5 py-4">
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    Load Template
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Template ini akan menggantikan data editor saat ini.
+                  </p>
+                </div>
+                <div className="px-5 py-4 space-y-3">
+                  <div className="rounded-lg border border-[#e5e5e5] bg-gray-50 px-3 py-2 text-xs text-gray-700">
+                    <div className="font-semibold text-gray-800">
+                      {selectedTemplate?.name || "Template"}
+                    </div>
+                    <div className="mt-2 space-y-2">
+                      {selectedTemplate?.groups?.length ? (
+                        selectedTemplate.groups.map((group) => (
+                          <div key={group.id}>
+                            <div className="font-semibold text-gray-700">
+                              {group.name || "Grup"}
+                            </div>
+                            <div className="mt-1 ml-4 space-y-1">
+                              {group.steps && group.steps.length > 0 ? (
+                                group.steps.map((step) => (
+                                  <div key={step.id} className="text-gray-600">
+                                    - {step.title || "Step"}
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="text-gray-500">
+                                  - Belum ada step.
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-gray-500">Belum ada grup.</div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowLoadPrompt(false);
+                        setSelectedTemplate(null);
+                      }}
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#e5e5e5] rounded-lg bg-white text-gray-700 hover:bg-gray-50"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (selectedTemplate) {
+                          handleOpen(selectedTemplate);
+                        }
+                        setShowLoadPrompt(false);
+                        setSelectedTemplate(null);
+                      }}
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+                    >
+                      Load
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           {templates.length === 0 ? (
             <div className="px-6 py-10 text-center text-sm text-gray-500">
               Belum ada template tersimpan.
@@ -52,17 +150,13 @@ export default function TemplatesPage() {
                     </span>
                     <button
                       type="button"
-                      disabled
-                      className="text-xs font-medium text-gray-300 border border-gray-200 rounded-md px-3 py-1 cursor-not-allowed"
+                      onClick={() => {
+                        setSelectedTemplate(template);
+                        setShowLoadPrompt(true);
+                      }}
+                      className="text-xs font-medium text-white border border-blue-600 rounded-md px-3 py-1 bg-blue-600 hover:bg-blue-700"
                     >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      disabled
-                      className="text-xs font-medium text-gray-300 border border-gray-200 rounded-md px-3 py-1 cursor-not-allowed"
-                    >
-                      Run
+                      Load
                     </button>
                     <button
                       type="button"
