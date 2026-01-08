@@ -174,80 +174,90 @@ export default function FlowStepsPanel({
                   Steps
                 </div>
                 <div className="divide-y divide-[#e5e5e5]">
-                  {group.steps.map((step) => {
-                    const isSelected =
-                      selectedStep.groupId === group.id &&
-                      selectedStep.stepId === step.id;
-                    const isInvalid = isStepInvalid(step);
-                    return (
-                      <div
-                        key={step.id}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          onSelectStep(group.id, step.id);
-                        }}
-                        onDragStart={(event) =>
-                          onStepDragStart(event, group.id, step.id)
-                        }
-                        onDragOver={(event) => event.preventDefault()}
-                        onDrop={(event) => onStepDrop(event, group.id, step.id)}
-                        onDragEnd={onStepDragEnd}
-                        draggable
-                        role="button"
-                        tabIndex={0}
-                        data-step-row="true"
-                        className={`relative w-full text-left pl-6 pr-6 py-4 transition-colors cursor-pointer rounded-md ${
-                          isInvalid
-                            ? "bg-red-50 ring-1 ring-red-200"
-                            : isSelected
-                            ? "bg-blue-50 ring-1 ring-blue-200"
-                            : "hover:bg-gray-50"
-                        }`}
-                      >
-                        <span
-                          className={`absolute left-0 top-3 bottom-3 w-1 rounded-r bg-blue-500 origin-center transition-transform duration-200 ease-out ${
-                            isSelected
-                              ? "scale-y-100 opacity-100"
-                              : "scale-y-0 opacity-0"
-                          }`}
-                        />
-                        <div className="flex items-start gap-4">
-                          <span
-                            className={`mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-md border ${
-                              draggedStepId === step.id &&
-                              draggedGroupId === group.id
-                                ? "border-blue-200 bg-blue-100 text-blue-700"
-                                : "border-[#e5e5e5] bg-white text-gray-400"
-                            }`}
-                          >
-                            <GripVertical className="h-4 w-4" />
-                          </span>
-                          <div className="flex-1">
-                            <p className="text-sm font-semibold text-gray-900">
-                              {step.title}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              {step.description}
-                            </p>
-                          </div>
-                          <span className="text-[11px] px-2 py-1 rounded-full bg-gray-100 text-gray-600">
-                            {step.type}
-                          </span>
-                          <button
-                            type="button"
-                            aria-label="Delete step"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              onDeleteStep(group.id, step.id);
-                            }}
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
+                  {group.steps.length === 0 ? (
+                    <div className="px-6 py-4">
+                      <div className="rounded-lg border border-dashed border-[#e5e5e5] bg-gray-50 px-4 py-4 text-sm text-gray-500">
+                        Blank step — add a step to start editing.
                       </div>
-                    );
-                  })}
+                    </div>
+                  ) : (
+                    group.steps.map((step) => {
+                      const isSelected =
+                        selectedStep.groupId === group.id &&
+                        selectedStep.stepId === step.id;
+                      const isInvalid = isStepInvalid(step);
+                      return (
+                        <div
+                          key={step.id}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onSelectStep(group.id, step.id);
+                          }}
+                          onDragStart={(event) =>
+                            onStepDragStart(event, group.id, step.id)
+                          }
+                          onDragOver={(event) => event.preventDefault()}
+                          onDrop={(event) =>
+                            onStepDrop(event, group.id, step.id)
+                          }
+                          onDragEnd={onStepDragEnd}
+                          draggable
+                          role="button"
+                          tabIndex={0}
+                          data-step-row="true"
+                          className={`relative w-full text-left pl-6 pr-6 py-4 transition-colors cursor-pointer rounded-md ${
+                            isInvalid
+                              ? "bg-red-50 ring-1 ring-red-200"
+                              : isSelected
+                              ? "bg-blue-50 ring-1 ring-blue-200"
+                              : "hover:bg-gray-50"
+                          }`}
+                        >
+                          <span
+                            className={`absolute left-0 top-3 bottom-3 w-1 rounded-r bg-blue-500 origin-center transition-transform duration-200 ease-out ${
+                              isSelected
+                                ? "scale-y-100 opacity-100"
+                                : "scale-y-0 opacity-0"
+                            }`}
+                          />
+                          <div className="flex items-start gap-4">
+                            <span
+                              className={`mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-md border ${
+                                draggedStepId === step.id &&
+                                draggedGroupId === group.id
+                                  ? "border-blue-200 bg-blue-100 text-blue-700"
+                                  : "border-[#e5e5e5] bg-white text-gray-400"
+                              }`}
+                            >
+                              <GripVertical className="h-4 w-4" />
+                            </span>
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold text-gray-900">
+                                {step.title}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {step.description}
+                              </p>
+                            </div>
+                            <span className="text-[11px] px-2 py-1 rounded-full bg-gray-100 text-gray-600">
+                              {step.type}
+                            </span>
+                            <button
+                              type="button"
+                              aria-label="Delete step"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                onDeleteStep(group.id, step.id);
+                              }}
+                              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                   <div className="pl-6 pr-6 py-4">
                     <button
                       type="button"
