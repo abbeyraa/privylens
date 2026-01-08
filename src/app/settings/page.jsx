@@ -30,6 +30,11 @@ export default function SettingsPage() {
     if (isResetting) return;
     setIsResetting(true);
     try {
+      try {
+        await fetch("/api/data", { method: "DELETE" });
+      } catch {
+        // Ignore delete errors to avoid blocking reset.
+      }
       localStorage.clear();
       sessionStorage.clear();
 

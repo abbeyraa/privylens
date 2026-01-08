@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { chromium } from "playwright";
 import fs from "fs/promises";
 import path from "path";
+import { getPlaywrightContextOptions } from "../playwright-options.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -120,8 +121,14 @@ export async function POST(request) {
   };
 
   const browser = await chromium.launch({ headless: false });
-  const context = await browser.newContext();
+  const context = await browser.newContext(getPlaywrightContextOptions());
+  await context.clearCookies();
   const page = await context.newPage();
+  await page.addInitScript(() => {
+    // Ensure a clean, incognito-like state for every run.
+    window.localStorage?.clear();
+    window.sessionStorage?.clear();
+  });
   await page.bringToFront();
 
   try {

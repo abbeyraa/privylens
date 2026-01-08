@@ -2,15 +2,48 @@
 
 import { useEffect, useState } from "react";
 
-export default function LogsModal({ logsContent, onClose }) {
+export default function LogsModal({ logsContent, onClose, onCreateStep }) {
   const [selectedLogEvent, setSelectedLogEvent] = useState(null);
   const [showCopyToast, setShowCopyToast] = useState(false);
+  const [showGeneratedToast, setShowGeneratedToast] = useState(false);
+  const [generatedToastId, setGeneratedToastId] = useState("");
+
+  const getEventSummary = (event) => {
+    if (!event) return "";
+    if (event.type === "navigation") {
+      return event.data?.url || event.message || "";
+    }
+    if (event.type === "interaction.click") {
+      return (
+        event.data?.text ||
+        event.data?.label ||
+        event.data?.selector ||
+        event.message ||
+        ""
+      );
+    }
+    return event.message || "";
+  };
+
+  const formatEventType = (type) => {
+    if (!type) return "event";
+    if (type.startsWith("interaction.")) {
+      return type.split(".").pop() || type;
+    }
+    return type;
+  };
 
   useEffect(() => {
     if (!showCopyToast) return;
     const timer = setTimeout(() => setShowCopyToast(false), 1200);
     return () => clearTimeout(timer);
   }, [showCopyToast]);
+
+  useEffect(() => {
+    if (!showGeneratedToast) return;
+    const timer = setTimeout(() => setShowGeneratedToast(false), 1200);
+    return () => clearTimeout(timer);
+  }, [showGeneratedToast]);
 
   return (
     <div className="fixed inset-0 z-50 flex h-screen w-screen items-center justify-center bg-black/40 backdrop-blur-[1px] p-4">
@@ -50,10 +83,16 @@ export default function LogsModal({ logsContent, onClose }) {
               <div className="grid grid-cols-1 md:grid-cols-[1.2fr_1fr] gap-4">
                 <div className="max-h-[50vh] overflow-y-auto space-y-2 pr-1">
                   {(logsContent.events || []).map((event) => (
-                    <button
+                    <div
                       key={event.id || event.ts}
-                      type="button"
+                      role="button"
+                      tabIndex={0}
                       onClick={() => setSelectedLogEvent(event)}
+                      onKeyDown={(eventKey) => {
+                        if (eventKey.key === "Enter") {
+                          setSelectedLogEvent(event);
+                        }
+                      }}
                       className={`w-full text-left rounded-lg border px-4 py-3 text-xs hover:bg-gray-50 ${
                         selectedLogEvent?.id === event.id
                           ? "border-blue-200 bg-blue-50 text-blue-900"
@@ -62,7 +101,7 @@ export default function LogsModal({ logsContent, onClose }) {
                     >
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-[10px] uppercase tracking-wide text-gray-400">
-                          {event.type || "event"}
+                          {formatEventType(event.type)}
                         </span>
                         <span
                           className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
@@ -74,7 +113,34 @@ export default function LogsModal({ logsContent, onClose }) {
                           {event.level || "info"}
                         </span>
                       </div>
-                    </button>
+                      {getEventSummary(event) && (
+                        <div className="mt-2 text-[11px] text-gray-600">
+                          {getEventSummary(event)}
+                        </div>
+                      )}
+                      {onCreateStep && (
+                        <div className="mt-2 relative inline-flex">
+                          <button
+                            type="button"
+                            onClick={(eventClick) => {
+                              eventClick.stopPropagation();
+                              onCreateStep(event);
+                              setGeneratedToastId(String(event.id || event.ts));
+                              setShowGeneratedToast(true);
+                            }}
+                            className="inline-flex items-center justify-center rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-[11px] font-semibold text-amber-800 hover:bg-amber-100"
+                          >
+                            Generate Step
+                          </button>
+                          {showGeneratedToast &&
+                            generatedToastId === String(event.id || event.ts) && (
+                            <span className="absolute -right-2 -top-2 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 shadow-sm toast-pop-smooth">
+                              Generated
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   ))}
                   {(!logsContent.events || logsContent.events.length === 0) && (
                     <div className="rounded-lg border border-dashed border-[#e5e5e5] bg-gray-50 px-4 py-6 text-center text-xs text-gray-500">
@@ -160,7 +226,7 @@ export default function LogsModal({ logsContent, onClose }) {
                     </div>
                   )}
                   {showCopyToast && (
-                    <div className="absolute top-3 right-3 rounded-md border border-blue-100 bg-blue-50 px-3 py-1 text-[10px] font-semibold text-blue-700 shadow-sm">
+                    <div className="absolute top-3 right-3 rounded-md border border-blue-100 bg-blue-50 px-3 py-1 text-[10px] font-semibold text-blue-700 shadow-sm toast-pop">
                       Copied
                     </div>
                   )}

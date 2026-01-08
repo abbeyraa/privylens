@@ -78,3 +78,5 @@ test_smoke.ps1
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+/files/*
+!/files/.gitkeep

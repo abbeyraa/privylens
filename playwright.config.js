@@ -29,6 +29,14 @@ export default defineConfig({
     /* Base URL to use in actions like `await page.goto('')`. */
     // baseURL: 'http://localhost:3000',
 
+    // Change these coordinates to run tests from a different location.
+    geolocation: {
+      latitude: -6.3152877833250125,
+      longitude: 90.91140346960181,
+      // longitude: 106.91140346960181,
+    },
+    permissions: ["geolocation"],
+
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: "on-first-retry",
   },

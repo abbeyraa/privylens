@@ -8,6 +8,16 @@ import { getTemplates } from "../template/templateStorage";
 const STORAGE_KEY = "otomate_editor_session";
 const TEMPLATE_OPEN_KEY = "otomate_template_open";
 
+const readJson = async (response) => {
+  const text = await response.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+};
+
 const buildOpenGroups = (groups) =>
   groups.reduce((acc, group) => {
     acc[group.id] = true;
@@ -185,6 +195,12 @@ export function useEditorHandlers(templateId = "") {
     const newGroup = {
       id: newGroupId,
       name: "New Group",
+      repeat: {
+        enabled: false,
+        mode: "count",
+        count: 1,
+        useData: true,
+      },
       steps: [],
     };
     setGroups((prev) => [...prev, newGroup]);
@@ -280,6 +296,29 @@ export function useEditorHandlers(templateId = "") {
     setDraggedGroupId(groupId);
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", `${groupId}:${stepId}`);
+    const step = groups
+      .find((group) => group.id === groupId)
+      ?.steps.find((item) => item.id === stepId);
+    if (step && typeof document !== "undefined") {
+      const ghost = document.createElement("div");
+      ghost.textContent = step.title || "Step";
+      ghost.style.position = "absolute";
+      ghost.style.top = "-1000px";
+      ghost.style.left = "-1000px";
+      ghost.style.padding = "6px 10px";
+      ghost.style.background = "#ffffff";
+      ghost.style.border = "1px solid #e5e5e5";
+      ghost.style.borderRadius = "8px";
+      ghost.style.boxShadow = "0 8px 16px rgba(15, 23, 42, 0.15)";
+      ghost.style.fontSize = "12px";
+      ghost.style.fontWeight = "600";
+      ghost.style.color = "#111827";
+      document.body.appendChild(ghost);
+      event.dataTransfer.setDragImage(ghost, 10, 10);
+      setTimeout(() => {
+        document.body.removeChild(ghost);
+      }, 0);
+    }
   };
 
   const handleStepDragEnd = () => {
@@ -287,7 +326,12 @@ export function useEditorHandlers(templateId = "") {
     setDraggedGroupId(null);
   };
 
-  const handleDrop = (event, targetGroupId, targetStepId) => {
+  const handleDrop = (
+    event,
+    targetGroupId,
+    targetStepId = "",
+    position = "after"
+  ) => {
     event.preventDefault();
     const payload = event.dataTransfer.getData("text/plain");
     if (payload.startsWith("template:")) {
@@ -320,24 +364,38 @@ export function useEditorHandlers(templateId = "") {
 
     const [dragGroupId, draggedStepId] = payload.split(":");
     if (!draggedStepId || draggedStepId === targetStepId) return;
-    if (dragGroupId !== targetGroupId) return;
 
-    setGroups((prev) =>
-      prev.map((group) => {
-        if (group.id !== targetGroupId) return group;
+    setGroups((prev) => {
+      let movedStep = null;
+      const withoutSource = prev.map((group) => {
+        if (group.id !== dragGroupId) return group;
         const draggedIndex = group.steps.findIndex(
           (step) => step.id === draggedStepId
         );
-        const targetIndex = group.steps.findIndex(
+        if (draggedIndex === -1) return group;
+        const nextSteps = [...group.steps];
+        [movedStep] = nextSteps.splice(draggedIndex, 1);
+        return { ...group, steps: nextSteps };
+      });
+
+      if (!movedStep) return prev;
+
+      return withoutSource.map((group) => {
+        if (group.id !== targetGroupId) return group;
+        const nextSteps = [...group.steps];
+        const targetIndex = nextSteps.findIndex(
           (step) => step.id === targetStepId
         );
-        if (draggedIndex === -1 || targetIndex === -1) return group;
-        const nextSteps = [...group.steps];
-        const [moved] = nextSteps.splice(draggedIndex, 1);
-        nextSteps.splice(targetIndex, 0, moved);
+        if (targetIndex === -1) {
+          nextSteps.push(movedStep);
+        } else {
+          const insertIndex =
+            position === "before" ? targetIndex : targetIndex + 1;
+          nextSteps.splice(insertIndex, 0, movedStep);
+        }
         return { ...group, steps: nextSteps };
-      })
-    );
+      });
+    });
   };
 
   const handleGroupNameChange = (groupId, value) => {
@@ -348,10 +406,57 @@ export function useEditorHandlers(templateId = "") {
     );
   };
 
+  const handleUpdateGroupRepeat = (groupId, nextRepeat) => {
+    setGroups((prev) =>
+      prev.map((group) =>
+        group.id === groupId ? { ...group, repeat: nextRepeat } : group
+      )
+    );
+  };
+
+  const handleDisableGroupRepeat = (groupId) => {
+    setGroups((prev) =>
+      prev.map((group) =>
+        group.id === groupId
+          ? {
+              ...group,
+              repeat: {
+                enabled: false,
+                mode: group.repeat?.mode || "count",
+                count: group.repeat?.count || 1,
+                useData: group.repeat?.useData ?? true,
+              },
+            }
+          : group
+      )
+    );
+  };
+
   const handleGroupDragStart = (event, groupId) => {
     setDraggedGroupSectionId(groupId);
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", `group:${groupId}`);
+    const group = groups.find((item) => item.id === groupId);
+    if (group && typeof document !== "undefined") {
+      const ghost = document.createElement("div");
+      ghost.textContent = group.name || "Group";
+      ghost.style.position = "absolute";
+      ghost.style.top = "-1000px";
+      ghost.style.left = "-1000px";
+      ghost.style.padding = "6px 10px";
+      ghost.style.background = "#ffffff";
+      ghost.style.border = "1px solid #e5e5e5";
+      ghost.style.borderRadius = "8px";
+      ghost.style.boxShadow = "0 8px 16px rgba(15, 23, 42, 0.15)";
+      ghost.style.fontSize = "12px";
+      ghost.style.fontWeight = "600";
+      ghost.style.color = "#111827";
+      document.body.appendChild(ghost);
+      event.dataTransfer.setDragImage(ghost, 10, 10);
+      setTimeout(() => {
+        document.body.removeChild(ghost);
+      }, 0);
+    }
   };
 
   const handleGroupDragEnd = () => {
@@ -389,9 +494,9 @@ export function useEditorHandlers(templateId = "") {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: targetUrl }),
       });
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || "Inspect failed");
+      const data = await readJson(response);
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.error || "Inspect failed");
       }
       setHasInspected(true);
     } catch (error) {
@@ -404,11 +509,11 @@ export function useEditorHandlers(templateId = "") {
   const loadLogs = async () => {
     try {
       const response = await fetch("/api/inspect");
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || "Logs not available");
+      const data = await readJson(response);
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.error || "Logs not available");
       }
-      setLogsContent(data.data || null);
+      setLogsContent(data?.data || null);
       setLogsOpen(true);
     } catch (error) {
       setInspectError(error.message || "Failed to load logs");
@@ -430,6 +535,20 @@ export function useEditorHandlers(templateId = "") {
     setHasInspected(false);
   };
 
+  const clearEditor = () => {
+    setGroups([]);
+    setSelectedStep({ groupId: "", stepId: "" });
+    setOpenGroups({});
+    setTargetUrl("");
+    setTemplateName("");
+    setLogsContent(null);
+    setLogsOpen(false);
+    setInspectError("");
+    setRunError("");
+    setHasInspected(false);
+    setLastAddedGroupId(null);
+  };
+
   const runSteps = async () => {
     setIsRunning(true);
     setRunError("");
@@ -441,9 +560,9 @@ export function useEditorHandlers(templateId = "") {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ targetUrl, groups }),
       });
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || "Run failed");
+      const data = await readJson(response);
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.error || "Run failed");
       }
       setHasInspected(true);
     } catch (error) {
@@ -487,6 +606,8 @@ export function useEditorHandlers(templateId = "") {
     handleStepDragEnd,
     handleDrop,
     handleGroupNameChange,
+    handleUpdateGroupRepeat,
+    handleDisableGroupRepeat,
     handleGroupDragStart,
     handleGroupDragEnd,
     handleGroupDrop,
@@ -495,5 +616,75 @@ export function useEditorHandlers(templateId = "") {
     loadLogs,
     closeLogs,
     resetEditor,
+    clearEditor,
+    addLogStep: (logEvent) => {
+      if (!logEvent) return;
+      const type = logEvent.type;
+      let step = null;
+      if (type === "navigation") {
+        step = {
+          id: `step-${Date.now()}`,
+          title: "Navigate from Logs",
+          description: logEvent.message || "Navigation from logs",
+          type: "Navigate",
+          scopeSelector: "",
+          inputKind: "text",
+          dateFormat: "",
+          value: "",
+          label: "",
+          timeoutMs: "5000",
+          waitMs: "",
+          url: logEvent.data?.url || "",
+        };
+      } else if (type === "interaction.click") {
+        step = {
+          id: `step-${Date.now()}`,
+          title: "Click from Logs",
+          description: logEvent.message || "Click from logs",
+          type: "Click",
+          scopeSelector: "",
+          inputKind: "text",
+          dateFormat: "",
+          value: "",
+          label:
+            logEvent.data?.label ||
+            logEvent.data?.text ||
+            logEvent.data?.selector ||
+            "",
+          timeoutMs: "5000",
+          waitMs: "",
+          url: "",
+        };
+      }
+
+      if (!step) return;
+
+      setGroups((prev) => {
+        const next = [...prev];
+        let groupIndex = next.findIndex((group) => group.name === "Logs");
+        if (groupIndex === -1) {
+          const groupId = `group-${Date.now()}`;
+          next.push({
+            id: groupId,
+            name: "Logs",
+            repeat: {
+              enabled: false,
+              mode: "count",
+              count: 1,
+              useData: true,
+            },
+            steps: [step],
+          });
+          groupIndex = next.length - 1;
+        } else {
+          const group = next[groupIndex];
+          next[groupIndex] = {
+            ...group,
+            steps: [...group.steps, step],
+          };
+        }
+        return next;
+      });
+    },
   };
 }
