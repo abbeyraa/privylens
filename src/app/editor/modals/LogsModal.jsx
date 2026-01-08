@@ -6,6 +6,31 @@ export default function LogsModal({ logsContent, onClose }) {
   const [selectedLogEvent, setSelectedLogEvent] = useState(null);
   const [showCopyToast, setShowCopyToast] = useState(false);
 
+  const getEventSummary = (event) => {
+    if (!event) return "";
+    if (event.type === "navigation") {
+      return event.data?.url || event.message || "";
+    }
+    if (event.type === "interaction.click") {
+      return (
+        event.data?.text ||
+        event.data?.label ||
+        event.data?.selector ||
+        event.message ||
+        ""
+      );
+    }
+    return event.message || "";
+  };
+
+  const formatEventType = (type) => {
+    if (!type) return "event";
+    if (type.startsWith("interaction.")) {
+      return type.split(".").pop() || type;
+    }
+    return type;
+  };
+
   useEffect(() => {
     if (!showCopyToast) return;
     const timer = setTimeout(() => setShowCopyToast(false), 1200);
@@ -62,7 +87,7 @@ export default function LogsModal({ logsContent, onClose }) {
                     >
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-[10px] uppercase tracking-wide text-gray-400">
-                          {event.type || "event"}
+                          {formatEventType(event.type)}
                         </span>
                         <span
                           className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
@@ -74,6 +99,11 @@ export default function LogsModal({ logsContent, onClose }) {
                           {event.level || "info"}
                         </span>
                       </div>
+                      {getEventSummary(event) && (
+                        <div className="mt-2 text-[11px] text-gray-600">
+                          {getEventSummary(event)}
+                        </div>
+                      )}
                     </button>
                   ))}
                   {(!logsContent.events || logsContent.events.length === 0) && (

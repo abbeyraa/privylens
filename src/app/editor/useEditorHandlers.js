@@ -8,6 +8,16 @@ import { getTemplates } from "../template/templateStorage";
 const STORAGE_KEY = "otomate_editor_session";
 const TEMPLATE_OPEN_KEY = "otomate_template_open";
 
+const readJson = async (response) => {
+  const text = await response.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+};
+
 const buildOpenGroups = (groups) =>
   groups.reduce((acc, group) => {
     acc[group.id] = true;
@@ -421,9 +431,9 @@ export function useEditorHandlers(templateId = "") {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: targetUrl }),
       });
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || "Inspect failed");
+      const data = await readJson(response);
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.error || "Inspect failed");
       }
       setHasInspected(true);
     } catch (error) {
@@ -436,11 +446,11 @@ export function useEditorHandlers(templateId = "") {
   const loadLogs = async () => {
     try {
       const response = await fetch("/api/inspect");
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || "Logs not available");
+      const data = await readJson(response);
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.error || "Logs not available");
       }
-      setLogsContent(data.data || null);
+      setLogsContent(data?.data || null);
       setLogsOpen(true);
     } catch (error) {
       setInspectError(error.message || "Failed to load logs");
@@ -473,9 +483,9 @@ export function useEditorHandlers(templateId = "") {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ targetUrl, groups }),
       });
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || "Run failed");
+      const data = await readJson(response);
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.error || "Run failed");
       }
       setHasInspected(true);
     } catch (error) {
