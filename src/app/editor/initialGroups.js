@@ -2,6 +2,12 @@ export const initialGroups = [
   {
     id: "group-access",
     name: "Access",
+    repeat: {
+      enabled: false,
+      mode: "count",
+      count: 1,
+      useData: true,
+    },
     steps: [
       {
         id: "access-step-1",
@@ -60,6 +66,12 @@ export const initialGroups = [
   {
     id: "group-after-login",
     name: "After Login",
+    repeat: {
+      enabled: false,
+      mode: "count",
+      count: 1,
+      useData: true,
+    },
     steps: [
       {
         id: "after-step-1",
@@ -78,6 +90,12 @@ export const initialGroups = [
   {
     id: "group-signout",
     name: "Sign Out Flow",
+    repeat: {
+      enabled: false,
+      mode: "count",
+      count: 1,
+      useData: true,
+    },
     steps: [
       {
         id: "signout-step-1",

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { Home, FilePlus, FolderOpen, Settings } from "lucide-react";
+import { Home, FilePlus, FolderOpen, Settings, Database } from "lucide-react";
 
 const menuItems = [
   {
@@ -15,6 +15,11 @@ const menuItems = [
     name: "Editor",
     href: "/editor",
     icon: FilePlus,
+  },
+  {
+    name: "Data",
+    href: "/data",
+    icon: Database,
   },
   {
     name: "Template",

@@ -185,6 +185,12 @@ export function useEditorHandlers(templateId = "") {
     const newGroup = {
       id: newGroupId,
       name: "New Group",
+      repeat: {
+        enabled: false,
+        mode: "count",
+        count: 1,
+        useData: true,
+      },
       steps: [],
     };
     setGroups((prev) => [...prev, newGroup]);
@@ -348,6 +354,34 @@ export function useEditorHandlers(templateId = "") {
     );
   };
 
+  const handleUpdateGroupRepeat = (groupId, nextRepeat) => {
+    setGroups((prev) =>
+      prev.map((group) =>
+        group.id === groupId
+          ? { ...group, repeat: nextRepeat }
+          : group
+      )
+    );
+  };
+
+  const handleDisableGroupRepeat = (groupId) => {
+    setGroups((prev) =>
+      prev.map((group) =>
+        group.id === groupId
+          ? {
+              ...group,
+              repeat: {
+                enabled: false,
+                mode: group.repeat?.mode || "count",
+                count: group.repeat?.count || 1,
+                useData: group.repeat?.useData ?? true,
+              },
+            }
+          : group
+      )
+    );
+  };
+
   const handleGroupDragStart = (event, groupId) => {
     setDraggedGroupSectionId(groupId);
     event.dataTransfer.effectAllowed = "move";
@@ -487,6 +521,8 @@ export function useEditorHandlers(templateId = "") {
     handleStepDragEnd,
     handleDrop,
     handleGroupNameChange,
+    handleUpdateGroupRepeat,
+    handleDisableGroupRepeat,
     handleGroupDragStart,
     handleGroupDragEnd,
     handleGroupDrop,
