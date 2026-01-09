@@ -105,12 +105,36 @@ function formatDateValue(raw, format) {
     .replace(/DD/g, dd);
 }
 
+async function waitForNavigationOrPopup(page, timeoutMs) {
+  const navigationPromise = page
+    .waitForNavigation({ timeout: timeoutMs, waitUntil: "domcontentloaded" })
+    .then(() => "navigation")
+    .catch(() => null);
+  const popupPromise = page
+    .waitForEvent("popup", { timeout: timeoutMs })
+    .then(() => "popup")
+    .catch(() => null);
+  const timeoutPromise = new Promise((resolve) =>
+    setTimeout(() => resolve(null), timeoutMs)
+  );
+  return Promise.race([navigationPromise, popupPromise, timeoutPromise]);
+}
+
+async function waitForPageIdle(page, timeoutMs) {
+  try {
+    await page.waitForLoadState("networkidle", { timeout: timeoutMs });
+  } catch {
+    // Ignore idle timeout to avoid blocking runs indefinitely.
+  }
+}
+
 export async function POST(request) {
   const payload = await request.json().catch(() => ({}));
   const targetUrl = payload.targetUrl?.trim() || "";
   const groups = Array.isArray(payload.groups) ? payload.groups : [];
   const firstStep = groups.find((group) => group?.steps?.length)?.steps?.[0];
   const shouldAutoNavigate = Boolean(targetUrl) && firstStep?.type !== "Navigate";
+  const idleTimeoutMs = 5000;
 
   const report = {
     type: "run",
@@ -158,6 +182,8 @@ export async function POST(request) {
                 const locator = await resolveLocator(page, step);
                 const timeoutMs = Number.parseInt(step.timeoutMs, 10) || 5000;
                 await locator.click({ timeout: timeoutMs });
+                await waitForNavigationOrPopup(page, idleTimeoutMs);
+                await waitForPageIdle(page, idleTimeoutMs);
               }
               break;
             case "Input":
@@ -217,6 +243,7 @@ export async function POST(request) {
                   waitUntil: "domcontentloaded",
                   timeout: timeoutMs,
                 });
+                await waitForPageIdle(page, idleTimeoutMs);
               }
               break;
             default:
