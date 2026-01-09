@@ -9,8 +9,11 @@ export default function FormInputModal({ open, onClose, onCreate }) {
 
   useEffect(() => {
     if (!open) return;
-    setFormHtml("");
-    setError("");
+    const id = setTimeout(() => {
+      setFormHtml("");
+      setError("");
+    }, 0);
+    return () => clearTimeout(id);
   }, [open]);
 
   if (!open) return null;

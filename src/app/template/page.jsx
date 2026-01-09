@@ -17,8 +17,11 @@ export default function TemplatesPage() {
   const router = useRouter();
 
   useEffect(() => {
-    setTemplates(getTemplates());
-    setIsHydrated(true);
+    const id = setTimeout(() => {
+      setTemplates(getTemplates());
+      setIsHydrated(true);
+    }, 0);
+    return () => clearTimeout(id);
   }, []);
 
   const handleDelete = () => {
