@@ -15,6 +15,16 @@ async function writeLog(data) {
   await fs.writeFile(LOG_PATH, JSON.stringify(data, null, 2), "utf-8");
 }
 
+const allowedInputKinds = new Set([
+  "text",
+  "number",
+  "date",
+  "checkbox",
+  "radio",
+  "toggle",
+  "select",
+]);
+
 async function resolveLocator(page, step, timeoutMs) {
   const label = step.label?.trim();
   const scopeSelector = step.scopeSelector?.trim();
@@ -23,7 +33,11 @@ async function resolveLocator(page, step, timeoutMs) {
 
   if (scopeSelector) {
     const scoped = page.locator(scopeSelector).first();
-    await scoped.waitFor({ state: "visible", timeout: timeoutMs });
+    try {
+      await scoped.waitFor({ state: "visible", timeout: timeoutMs });
+    } catch {
+      throw new Error(`Scope selector not found: ${scopeSelector}`);
+    }
     scope = scoped;
   }
 
@@ -78,10 +92,35 @@ async function resolveLocator(page, step, timeoutMs) {
     }
   }
 
-  if (step.type === "Input" && inputKind === "radio") {
-    throw new Error("Label or value is required");
+  if (step.type === "Click") {
+    if (!label) {
+      throw new Error("Label/Text is required for Click actions");
+    }
+    throw new Error(
+      `Click target not found for label "${label}"${
+        scopeSelector ? ` within scope "${scopeSelector}"` : ""
+      }`
+    );
   }
-  throw new Error("Label is required");
+
+  if (step.type === "Input" && inputKind === "radio") {
+    if (!label && !step.value?.trim()) {
+      throw new Error("Radio input requires Label/Text or Value");
+    }
+  }
+
+  if (step.type === "Input") {
+    if (!label) {
+      throw new Error("Label/Text is required for Input actions");
+    }
+    throw new Error(
+      `Input target not found for label "${label}"${
+        scopeSelector ? ` within scope "${scopeSelector}"` : ""
+      }`
+    );
+  }
+
+  throw new Error("Label/Text is required");
 }
 
 function normalizeBooleanValue(value) {
@@ -178,6 +217,12 @@ export async function POST(request) {
         };
 
         try {
+          if (!step?.type) {
+            throw new Error("Action type is required");
+          }
+          if (step.type === "Input" && !allowedInputKinds.has(step.inputKind || "text")) {
+            throw new Error("Input kind is invalid");
+          }
           switch (step.type) {
             case "Click":
               {
@@ -193,6 +238,12 @@ export async function POST(request) {
                 await locator.waitFor({ state: "visible", timeout: maxTimeoutMs });
                 const inputKind = step.inputKind || "text";
                 const rawValue = step.value || "";
+                if (inputKind === "number" && !rawValue) {
+                  throw new Error("Number value is required");
+                }
+                if (inputKind === "date" && !rawValue) {
+                  throw new Error("Date value is required");
+                }
                 if (inputKind === "checkbox" || inputKind === "toggle") {
                   const desired = normalizeBooleanValue(rawValue);
                   if (desired === null) {
@@ -253,14 +304,16 @@ export async function POST(request) {
 
           stepReport.status = "success";
         } catch (error) {
+          const contextLabel = `${stepReport.group} / ${stepReport.step}`;
+          const message = `${contextLabel}: ${error.message}`;
           stepReport.status = "failed";
-          stepReport.error = error.message;
+          stepReport.error = message;
           report.steps.push(stepReport);
           report.status = "failed";
           report.error = {
-            message: error.message,
-            group: group.name || group.id || "Group",
-            step: step.title || step.id || "Step",
+            message,
+            group: stepReport.group,
+            step: stepReport.step,
           };
           throw error;
         }
