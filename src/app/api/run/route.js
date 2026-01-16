@@ -30,6 +30,8 @@ async function resolveLocator(page, step, timeoutMs) {
   const scopeSelector = step.scopeSelector?.trim();
   const inputKind = step.inputKind || "text";
   let scope = page;
+  const radioLabel =
+    inputKind === "radio" && step.value?.trim() ? step.value.trim() : label;
 
   if (scopeSelector) {
     const scoped = page.locator(scopeSelector).first();
@@ -42,43 +44,45 @@ async function resolveLocator(page, step, timeoutMs) {
   }
 
   const candidates = [];
-  if (step.type === "Input" && inputKind === "radio" && step.value?.trim()) {
-    const escaped = step.value.trim().replace(/["\\]/g, "\\$&");
+  if (step.type === "Input" && inputKind === "radio" && radioLabel) {
+    const escaped = radioLabel.replace(/["\\]/g, "\\$&");
     candidates.push(scope.locator(`input[type="radio"][value="${escaped}"]`));
+    candidates.push(scope.locator(`label:has-text("${escaped}")`));
   }
 
-  if (label) {
+  if (radioLabel || label) {
+    const effectiveLabel = radioLabel || label;
     if (step.type === "Click") {
-      candidates.push(scope.getByRole("button", { name: label }));
-      candidates.push(scope.getByRole("link", { name: label }));
-      candidates.push(scope.getByText(label, { exact: true }));
+      candidates.push(scope.getByRole("button", { name: effectiveLabel }));
+      candidates.push(scope.getByRole("link", { name: effectiveLabel }));
+      candidates.push(scope.getByText(effectiveLabel, { exact: true }));
     }
     if (step.type === "Input") {
       switch (inputKind) {
         case "checkbox":
         case "toggle":
-          candidates.push(scope.getByRole("checkbox", { name: label }));
-          candidates.push(scope.getByRole("switch", { name: label }));
-          candidates.push(scope.getByLabel(label));
+          candidates.push(scope.getByRole("checkbox", { name: effectiveLabel }));
+          candidates.push(scope.getByRole("switch", { name: effectiveLabel }));
+          candidates.push(scope.getByLabel(effectiveLabel));
           break;
         case "radio":
-          candidates.push(scope.getByRole("radio", { name: label }));
-          candidates.push(scope.getByLabel(label));
+          candidates.push(scope.getByRole("radio", { name: effectiveLabel }));
+          candidates.push(scope.getByLabel(effectiveLabel));
           break;
         case "select":
-          candidates.push(scope.getByRole("combobox", { name: label }));
-          candidates.push(scope.getByLabel(label));
+          candidates.push(scope.getByRole("combobox", { name: effectiveLabel }));
+          candidates.push(scope.getByLabel(effectiveLabel));
           break;
         case "number":
-          candidates.push(scope.getByRole("spinbutton", { name: label }));
-          candidates.push(scope.getByLabel(label));
-          candidates.push(scope.getByRole("textbox", { name: label }));
-          candidates.push(scope.getByPlaceholder(label));
+          candidates.push(scope.getByRole("spinbutton", { name: effectiveLabel }));
+          candidates.push(scope.getByLabel(effectiveLabel));
+          candidates.push(scope.getByRole("textbox", { name: effectiveLabel }));
+          candidates.push(scope.getByPlaceholder(effectiveLabel));
           break;
         default:
-          candidates.push(scope.getByRole("textbox", { name: label }));
-          candidates.push(scope.getByLabel(label));
-          candidates.push(scope.getByPlaceholder(label));
+          candidates.push(scope.getByRole("textbox", { name: effectiveLabel }));
+          candidates.push(scope.getByLabel(effectiveLabel));
+          candidates.push(scope.getByPlaceholder(effectiveLabel));
           break;
       }
     }
@@ -94,8 +98,8 @@ async function resolveLocator(page, step, timeoutMs) {
     }
   }
 
-  if (step.type === "Input" && label) {
-    const escapedLabel = label.replace(/["\\]/g, "\\$&");
+  if (step.type === "Input" && (label || radioLabel)) {
+    const escapedLabel = (radioLabel || label).replace(/["\\]/g, "\\$&");
     const labelLocator = scope
       .locator(`label:has-text("${escapedLabel}")`)
       .first();
@@ -296,7 +300,7 @@ export async function POST(request) {
                 }
 
                 if (inputKind === "radio") {
-                  await locator.check({ timeout: maxTimeoutMs });
+                  await locator.click({ timeout: maxTimeoutMs });
                   break;
                 }
 
